@@ -15,7 +15,4 @@ MonoBehaviour:
   driveSpeed: 1500
   topSpeed: 60
   steeringAngle: 60
-  brakeForce: 10
-  driftGrip: 0.5
-  driftSpeedThreshold: 10
-  driftSteeringAngleThreshold: 30
+  brakeForce: 10000

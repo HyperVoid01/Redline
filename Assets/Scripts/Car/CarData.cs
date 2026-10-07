@@ -8,9 +8,4 @@ public class CarData : ScriptableObject
     public float topSpeed = 60;
     public float steeringAngle = 60;
     public float brakeForce = 10;
-    
-    [Header("Drifting")]
-    public float driftGrip = 0.5f;
-    public float driftSpeedThreshold = 10;
-    public float driftSteeringAngleThreshold = 30;
 }

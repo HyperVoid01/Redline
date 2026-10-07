@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 289cd5e6e748b524da85f2eefe66f32c, type: 3}
+  m_Name: TrackData
+  m_EditorClassIdentifier: 
+  totalLength: 3000
+  startStraightLength: 60
+  finishStraightLength: 60
+  roadWidth: 24
+  roadMaterial: {fileID: 2100000, guid: 5a2ded0fa15deb6439425bc710227b6a, type: 2}
+  uvTileLength: 12
+  sampleSpacing: 2
+  knotSpacing: 8
+  straightWeight: 3
+  bendWeight: 4
+  sharpTurnWeight: 2
+  straightLength: {x: 60, y: 200}
+  bendAngle: {x: 20, y: 60}
+  bendRadius: {x: 80, y: 150}
+  sharpAngle: {x: 70, y: 120}
+  sharpRadius: {x: 30, y: 50}
+  maxHeadingDrift: 140
+  gatePrefab: {fileID: 327334984979816120, guid: fcb9bb4521289364db641dcc50cb5b78, type: 3}
+  firstGateDistance: 150
+  gateSpacing: 250
