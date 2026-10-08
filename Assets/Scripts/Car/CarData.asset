@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b21c8a1b12fb454db5ae57e8d5592c8, type: 3}
   m_Name: CarData
   m_EditorClassIdentifier: 
-  driveSpeed: 1500
-  topSpeed: 60
+  driveSpeed: 500
+  topSpeed: 150
   steeringAngle: 60
   brakeForce: 10000
