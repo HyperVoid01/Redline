@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class CarController : MonoBehaviour
 {
+    PlayerControls controls;
     [SerializeField] private CarData carData;
     [SerializeField] private Rigidbody rigidBody;
     [SerializeField] private WheelCollider wheel1, wheel2, wheel3, wheel4;
@@ -24,6 +25,8 @@ public class CarController : MonoBehaviour
 
     /// <summary>Top speed from CarData in km/h.</summary>
     public float TopSpeedKmh => carData != null ? carData.topSpeed : 0f;
+    
+    public float Throttle => Mathf.Abs(verticalInput);
 
     private void Awake()
     {
@@ -41,6 +44,8 @@ public class CarController : MonoBehaviour
 
         // Local-space offset in meters. Keep it low and near the middle of the car.
         rigidBody.centerOfMass = centerOfMass;
+        
+        controls = new PlayerControls();
     }
 
     private void Update()
@@ -49,6 +54,11 @@ public class CarController : MonoBehaviour
         verticalInput = Input.GetAxis("Vertical");
         handbrake = Input.GetKey(KeyCode.Space);
 
+        // controls.Gameplay.Movement.performed += ctx => horizontalInput = ctx.ReadValue<Vector2>().x;
+        // controls.Gameplay.Movement.performed += ctx => verticalInput = ctx.ReadValue<Vector2>().y;
+        // controls.Gameplay.Movement.canceled += ctx => horizontalInput = 0f;
+        // controls.Gameplay.Movement.canceled += ctx => horizontalInput = 0f;
+        
         UpdateHud();
     }
 

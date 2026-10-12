@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 289cd5e6e748b524da85f2eefe66f32c, type: 3}
   m_Name: TrackData
   m_EditorClassIdentifier: 
-  totalLength: 3000
+  totalLength: 10000
   startStraightLength: 60
   finishStraightLength: 60
   roadWidth: 24
@@ -40,4 +40,4 @@ MonoBehaviour:
   barrierYawOffset: 0
   gatePrefab: {fileID: 327334984979816120, guid: fcb9bb4521289364db641dcc50cb5b78, type: 3}
   firstGateDistance: 150
-  gateSpacing: 250
+  gateSpacing: 500

@@ -29,6 +29,7 @@ public class TrackMaker : MonoBehaviour
     private MeshRenderer meshRenderer;
     private MeshCollider meshCollider;
     private Mesh roadMesh;
+    private TrackSampler sampler;
     
     public TerrainStripGenerator terrain;
     public VegetationScatterer scatterer;
@@ -125,6 +126,7 @@ public class TrackMaker : MonoBehaviour
         if (meshFilter == null) meshFilter = GetComponent<MeshFilter>();
         if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
         if (meshCollider == null) meshCollider = GetComponent<MeshCollider>();
+        if (sampler == null) sampler = GetComponent<TrackSampler>();
 
         if (roadMesh == null)
         {
@@ -426,6 +428,7 @@ public class TrackMaker : MonoBehaviour
         meshCollider.sharedMesh = roadMesh;
         
         terrain.Generate();
+        sampler.Build();
         scatterer.Scatter();
     }
 

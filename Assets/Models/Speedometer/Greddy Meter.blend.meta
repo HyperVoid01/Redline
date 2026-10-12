@@ -3,7 +3,92 @@ guid: 051057e0678b2ac4eaa87c1bdca6ff74
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Boost
+    second: {fileID: 2100000, guid: aa4ca77ba60f9f648b396eafc575c51e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Boost Alarm
+    second: {fileID: 2100000, guid: 1f020c2eb1b0b8d4fb80ada0b96c70c1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Carbon
+    second: {fileID: 2100000, guid: 457c1ee5f4b3335438ba4e5f634224a2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Center
+    second: {fileID: 2100000, guid: 4db1e9f4819daff42b12c8c6a9203a86, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Flocked
+    second: {fileID: 2100000, guid: 9c65afadf0a03b44c83a858fd41aa8a1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Frame
+    second: {fileID: 2100000, guid: 7b2e21009ea488b4bbdb931f35b22ab1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Fuel
+    second: {fileID: 2100000, guid: 96921ed6978058e47a479d91ff0e39a2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Glass
+    second: {fileID: 2100000, guid: 9e0887728a81df04b9a756eb0d795075, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Needle
+    second: {fileID: 2100000, guid: 6d29190d60b0f5442b128902c0699861, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Nos
+    second: {fileID: 2100000, guid: 4acd72b3ccd323f4c9e449c2e87de248, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OIL TEMP
+    second: {fileID: 2100000, guid: e9b6f563ff11386439282bf8b2764452, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Oil Press
+    second: {fileID: 2100000, guid: c1c71847881cd0149a18b0d4dff28451, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Rev Alarm
+    second: {fileID: 2100000, guid: a1c60259230be0347801c43209a3ae81, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Speed
+    second: {fileID: 2100000, guid: deb4e35e0a04001478bfcf58bf32fe62, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tacho
+    second: {fileID: 2100000, guid: efebf23572a23ed40b27dbdf1997b821, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Volts
+    second: {fileID: 2100000, guid: b56fa19a053703348ba84f5bf5bb1b5b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Water
+    second: {fileID: 2100000, guid: fae1e9ca806cd714db61a6e38f99aa73, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

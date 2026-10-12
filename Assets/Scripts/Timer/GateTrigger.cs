@@ -5,6 +5,7 @@ public class GateTrigger : MonoBehaviour
 {
     [SerializeField] private float timeBonus = 10f;
     [SerializeField] private string playerTag = "Player";
+    [SerializeField] private GameObject mesh;
 
     private bool triggered;
 
@@ -29,6 +30,7 @@ public class GateTrigger : MonoBehaviour
         }
 
         triggered = true;
+        mesh.SetActive(false);
 
         if (TimeManager.Instance != null)
         {
