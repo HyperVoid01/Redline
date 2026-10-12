@@ -41,3 +41,9 @@ MonoBehaviour:
   gatePrefab: {fileID: 327334984979816120, guid: fcb9bb4521289364db641dcc50cb5b78, type: 3}
   firstGateDistance: 150
   gateSpacing: 500
+  generateFinishPlatform: 1
+  finishPlatformLength: 30
+  finishPlatformSideMargin: 6
+  finishPlatformThickness: 3
+  finishPlatformMaterial: {fileID: 0}
+  finishDecorPrefab: {fileID: 327334984979816120, guid: 2f2546cae10684442a53b345e383fe95, type: 3}

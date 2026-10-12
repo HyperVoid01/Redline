@@ -7,6 +7,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TMP_Text speedText;
     [SerializeField] private TMP_Text timerText;
     [SerializeField] private GameObject gameOverPanel;
+    [SerializeField] private GameObject winPanel;
 
     [Header("Player car")]
     [Tooltip("Set automatically by CarSpawner when the car is placed. Only assign this by hand if the car already exists in the scene and you aren't using CarSpawner.")]
@@ -121,6 +122,14 @@ public class UIManager : MonoBehaviour
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(show);
+        }
+    }
+    
+    public void ShowWin(bool show)
+    {
+        if (winPanel != null)
+        {
+            winPanel.SetActive(show);
         }
     }
 

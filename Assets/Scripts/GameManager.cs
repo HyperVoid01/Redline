@@ -2,7 +2,11 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    [Tooltip("Freeze the game on win, like game over does.")]
+    [SerializeField] private bool freezeOnWin = true;
+
     public bool IsGameOver { get; private set; }
+    public bool IsWon { get; private set; }
 
     public static GameManager Instance;
 
@@ -26,11 +30,13 @@ public class GameManager : MonoBehaviour
     public void InitializeGame()
     {
         IsGameOver = false;
+        IsWon = false;
         Time.timeScale = 1f;
 
         if (UIManager.Instance != null)
         {
             UIManager.Instance.ShowGameOver(false);
+            UIManager.Instance.ShowWin(false);
         }
 
         if (TimeManager.Instance != null)
@@ -59,5 +65,31 @@ public class GameManager : MonoBehaviour
 
         // Freezes physics and Update-driven movement.
         Time.timeScale = 0f;
+    }
+
+    // Reached the finish platform
+    public void WinGame()
+    {
+        // Marking the game as over also stops the timer running out after a win.
+        if (IsGameOver)
+            return;
+
+        IsGameOver = true;
+        IsWon = true;
+
+        if (TimeManager.Instance != null)
+        {
+            TimeManager.Instance.StopTimer();
+        }
+
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowWin(true);
+        }
+
+        if (freezeOnWin)
+        {
+            Time.timeScale = 0f;
+        }
     }
 }

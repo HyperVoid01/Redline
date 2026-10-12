@@ -23,6 +23,7 @@ public class TrackMaker : MonoBehaviour
     private const string GatesRootName = "Gates";
     private const string BarriersRootName = "BarrierPieces";
     private const string LegacyBarriersName = "Barriers"; // from the old procedural barrier mesh
+    private const string FinishRootName = "FinishPlatform";
 
     private SplineContainer container;
     private MeshFilter meshFilter;
@@ -115,6 +116,7 @@ public class TrackMaker : MonoBehaviour
         BuildRoadMesh();
         SpawnBarriers();
         SpawnGates();
+        SpawnFinishPlatform();
 
         IsGenerated = true;
         Debug.Log($"{name}: generated {TrackLength:0} m track with seed {CurrentSeed}.", this);
@@ -520,6 +522,61 @@ public class TrackMaker : MonoBehaviour
         {
             SampleAtT(d / TrackLength, out Vector3 position, out Vector3 forward);
             Instantiate(trackData.gatePrefab, position, Quaternion.LookRotation(forward, Vector3.up), root);
+        }
+    }
+    
+    // ---------------------------------------------------------------- Finish platform
+
+    private void SpawnFinishPlatform()
+    {
+        ClearChildren(transform.Find(FinishRootName));
+
+        if (!trackData.generateFinishPlatform)
+        {
+            return;
+        }
+
+        Transform root = GetOrCreateRoot(FinishRootName);
+
+        SampleAtT(1f, out Vector3 end, out Vector3 forward);
+        Quaternion rotation = Quaternion.LookRotation(forward, Vector3.up);
+
+        float length = trackData.finishPlatformLength;
+        float width = trackData.roadWidth + trackData.finishPlatformSideMargin * 2f;
+        float thickness = trackData.finishPlatformThickness;
+
+        // Top surface sits flush with the end of the road, extending straight on from it.
+        Vector3 topCentre = end + forward * (length * 0.5f);
+        Vector3 slabCentre = topCentre + Vector3.down * (thickness * 0.5f);
+
+        GameObject slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        slab.name = "Platform";
+        slab.transform.SetParent(root, true);
+        slab.transform.SetPositionAndRotation(slabCentre, rotation);
+        slab.transform.localScale = new Vector3(width, thickness, length);
+
+        Material material = trackData.finishPlatformMaterial != null
+            ? trackData.finishPlatformMaterial
+            : trackData.roadMaterial;
+        if (material != null)
+        {
+            slab.GetComponent<Renderer>().sharedMaterial = material;
+        }
+
+        // Trigger volume covering the platform surface.
+        const float zoneHeight = 6f;
+        GameObject zone = new GameObject("FinishZone");
+        zone.transform.SetParent(root, true);
+        zone.transform.SetPositionAndRotation(topCentre + Vector3.up * (zoneHeight * 0.5f), rotation);
+
+        BoxCollider box = zone.AddComponent<BoxCollider>();
+        box.isTrigger = true;
+        box.size = new Vector3(width, zoneHeight, length);
+        zone.AddComponent<FinishTrigger>();
+
+        if (trackData.finishDecorPrefab != null)
+        {
+            Instantiate(trackData.finishDecorPrefab, topCentre, rotation, root);
         }
     }
 

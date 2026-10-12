@@ -641,6 +641,7 @@ MonoBehaviour:
   wheel4: {fileID: 1292028373464833018}
   centerOfMass: {x: 0, y: -0.2, z: 0}
   updatesHud: 1
+  playerControlled: 1
 --- !u!114 &8144703403040921314
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -690,7 +691,6 @@ MonoBehaviour:
   - {fileID: 9147321757171006168}
   startIndex: 0
   enableNumberKeys: 1
-  cycleKey: 36
 --- !u!114 &7471266933912895395
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -717,7 +717,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 031ac39d0b1a8b144a5007226d0914d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100000
+  maxHealth: 100
   onHealthChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -1010,7 +1010,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -1045,10 +1045,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   carBody: {fileID: 0}
   sensitivity: 2
+  stickSensitivity: 120
   maxYaw: 120
   maxLookUp: 60
   maxLookDown: 45
-  recenterKey: 99
   lockCursor: 1
   shiftPerAccel: {x: 0.008, y: 0.004, z: 0.01}
   maxShift: {x: 0.12, y: 0.06, z: 0.15}
@@ -1485,7 +1485,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0

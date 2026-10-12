@@ -65,6 +65,19 @@ public class TrackData : ScriptableObject
     public GameObject gatePrefab;
     public float firstGateDistance = 150f;
     public float gateSpacing = 250f;
+    
+    [Header("Finish Platform")]
+    public bool generateFinishPlatform = true;
+    [Tooltip("How far the platform extends past the end of the road, in metres.")]
+    public float finishPlatformLength = 30f;
+    [Tooltip("Extra width on each side of the road.")]
+    public float finishPlatformSideMargin = 6f;
+    [Tooltip("Slab thickness. Make it thicker if the land beneath the end of the road looks too low.")]
+    public float finishPlatformThickness = 3f;
+    [Tooltip("Optional. Falls back to the road material.")]
+    public Material finishPlatformMaterial;
+    [Tooltip("Optional decoration placed in the middle of the platform, e.g. a finish arch.")]
+    public GameObject finishDecorPrefab;
 
     private void OnValidate()
     {
@@ -108,6 +121,10 @@ public class TrackData : ScriptableObject
 
         gateSpacing = Mathf.Max(0f, gateSpacing);
         firstGateDistance = Mathf.Max(0f, firstGateDistance);
+        
+        finishPlatformLength = Mathf.Max(5f, finishPlatformLength);
+        finishPlatformSideMargin = Mathf.Max(0f, finishPlatformSideMargin);
+        finishPlatformThickness = Mathf.Max(0.5f, finishPlatformThickness);
     }
 
     private static Vector2 ClampRange(Vector2 range, float minimum)

@@ -851,15 +851,15 @@ MonoBehaviour:
   maxAimAngle: 45
   shotInterval: 0.1
   burstSize: 10
-  burstCooldown: 2.5
+  burstCooldown: 1
   initialDelay: 3
   aimOffset: {x: 0, y: 0.8, z: 0}
   bulletPrefab: {fileID: 1855037404980880345, guid: ef3d63e812696434db9cb1a40a5dd17a, type: 3}
   bulletSpeed: 110
   bulletLifetime: 2
   damagePerHit: 1
-  spreadDegrees: 2
-  leadTarget: 1
+  spreadDegrees: 10
+  leadTarget: 0
   hitMask:
     serializedVersion: 2
     m_Bits: 192

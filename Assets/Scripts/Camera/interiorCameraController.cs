@@ -24,11 +24,12 @@ public class InteriorCameraController : MonoBehaviour
     [Header("Mouse Look")]
     [Tooltip("Degrees of head turn per unit of mouse movement.")]
     [SerializeField] private float sensitivity = 2f;
+    [Tooltip("Degrees per second of head turn at full stick deflection.")]
+    [SerializeField] private float stickSensitivity = 120f;
     [SerializeField] private float maxYaw = 120f;
     [SerializeField] private float maxLookUp = 60f;
     [SerializeField] private float maxLookDown = 45f;
     [Tooltip("Hold to smoothly return the view to straight ahead.")]
-    [SerializeField] private KeyCode recenterKey = KeyCode.C;
     [SerializeField] private bool lockCursor = true;
 
     [Header("Head Movement (car-local)")]
@@ -192,7 +193,13 @@ public class InteriorCameraController : MonoBehaviour
 
     private void UpdateLook(float dt)
     {
-        if (Input.GetKey(recenterKey))
+        InputManager input = InputManager.Instance;
+        if (input == null)
+        {
+            return;
+        }
+
+        if (input.Recenter)
         {
             float blend = 1f - Mathf.Exp(-8f * dt);
             yaw = Mathf.Lerp(yaw, 0f, blend);
@@ -200,8 +207,15 @@ public class InteriorCameraController : MonoBehaviour
             return;
         }
 
-        yaw += Input.GetAxisRaw("Mouse X") * sensitivity;
-        pitch -= Input.GetAxisRaw("Mouse Y") * sensitivity;
+        // Mouse: movement this frame, so no dt.
+        Vector2 mouse = input.LookMouse;
+        yaw += mouse.x * sensitivity;
+        pitch -= mouse.y * sensitivity;
+
+        // Stick: how far it's held, so scale by time.
+        Vector2 stick = input.LookStick;
+        yaw += stick.x * stickSensitivity * dt;
+        pitch -= stick.y * stickSensitivity * dt;
 
         yaw = Mathf.Clamp(yaw, -maxYaw, maxYaw);
         pitch = Mathf.Clamp(pitch, -maxLookUp, maxLookDown);
