@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
     [SerializeField] private TMP_Text speedText;
     [SerializeField] private TMP_Text timerText;
+    [SerializeField] private Slider healthBar;
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private GameObject winPanel;
 
@@ -115,6 +117,11 @@ public class UIManager : MonoBehaviour
 
         lastTimeString = $"{minutes:00}:{seconds:00}";
         SetText(timerText, extraTimerTexts, lastTimeString);
+    }
+
+    public void UpdateHealth()
+    {
+        
     }
 
     public void ShowGameOver(bool show)

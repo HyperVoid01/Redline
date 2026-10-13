@@ -16,3 +16,12 @@ MonoBehaviour:
   topSpeed: 150
   steeringAngle: 60
   brakeForce: 10000
+  rearDriveShare: 0.8
+  handbrakeForce: 3000
+  driftSidewaysStiffness: 0.55
+  gripLossSpeed: 12
+  gripRecoverySpeed: 2.5
+  steerSmoothing: 8
+  highSpeedSteerFactor: 0.45
+  counterSteerAssist: 0.5
+  driftAngleThreshold: 12

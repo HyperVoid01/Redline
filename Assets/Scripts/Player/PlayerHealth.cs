@@ -43,6 +43,7 @@ public class PlayerHealth : MonoBehaviour
 
     void Die()
     {
+        SoundPlayer.Instance.PlaySound(SoundID.Crash, transform.position);
         IsDead = true;
         onDied?.Invoke();
 

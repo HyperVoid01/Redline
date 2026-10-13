@@ -29,6 +29,7 @@ public class GateTrigger : MonoBehaviour
             return;
         }
 
+        SoundPlayer.Instance.PlaySound2D(SoundID.Checkpoint);
         triggered = true;
         mesh.SetActive(false);
 

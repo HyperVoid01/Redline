@@ -39,6 +39,15 @@ public class CarController : MonoBehaviour
 
     /// <summary>Angle in degrees between where the car points and where it is travelling.</summary>
     public float DriftAngle { get; private set; }
+    
+    /// <summary>Steering angle actually applied to the front wheels, in degrees (positive = right).</summary>
+    public float SteerAngle { get; private set; }
+
+    /// <summary>Applied steering as a fraction of full lock, from -1 to 1.</summary>
+    public float SteerNormalized =>
+        carData != null && carData.steeringAngle > 0f
+            ? Mathf.Clamp(SteerAngle / carData.steeringAngle, -1f, 1f)
+            : 0f;
 
     /// <summary>True while the car is sliding sideways at speed.</summary>
     public bool IsDrifting =>
@@ -201,6 +210,7 @@ public class CarController : MonoBehaviour
 
     private void ApplySteering(float steer)
     {
+        SteerAngle = steer;
         wheel1.steerAngle = steer;
         wheel2.steerAngle = steer;
     }

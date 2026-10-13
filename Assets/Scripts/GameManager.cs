@@ -10,6 +10,9 @@ public class GameManager : MonoBehaviour
 
     public static GameManager Instance;
 
+    // Handle for the looping night ambience, kept so it can be stopped later.
+    private AudioSource nightAmbience;
+
     private void Awake()
     {
         if (Instance != null)
@@ -24,6 +27,12 @@ public class GameManager : MonoBehaviour
     private void Start()
     {
         InitializeGame();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            StopNightAmbience();
     }
 
     // Initialize all scripts
@@ -43,6 +52,8 @@ public class GameManager : MonoBehaviour
         {
             TimeManager.Instance.StartTimer();
         }
+
+        StartNightAmbience();
     }
 
     // Game Over
@@ -62,6 +73,11 @@ public class GameManager : MonoBehaviour
         {
             UIManager.Instance.ShowGameOver(true);
         }
+
+        StopNightAmbience();
+
+        if (SoundPlayer.Instance != null)
+            SoundPlayer.Instance.PlaySound2D(SoundID.GameOver);
 
         // Freezes physics and Update-driven movement.
         Time.timeScale = 0f;
@@ -87,9 +103,37 @@ public class GameManager : MonoBehaviour
             UIManager.Instance.ShowWin(true);
         }
 
+        // Loops keep playing at timeScale 0, so stop the ambience here too.
+        StopNightAmbience();
+
         if (freezeOnWin)
         {
             Time.timeScale = 0f;
         }
+    }
+
+    // ---------- Night ambience ----------
+
+    private void StartNightAmbience()
+    {
+        if (SoundPlayer.Instance == null)
+            return;
+
+        // Avoid stacking loops if InitializeGame is called again (restart).
+        StopNightAmbience();
+
+        // NightAmbience is a 2D entry in the SoundLibrary, so the position doesn't matter.
+        nightAmbience = SoundPlayer.Instance.PlayLoop(SoundID.NightAmbience, Vector3.zero);
+    }
+
+    private void StopNightAmbience()
+    {
+        if (nightAmbience == null)
+            return;
+
+        if (SoundPlayer.Instance != null)
+            SoundPlayer.Instance.StopLoop(nightAmbience);
+
+        nightAmbience = null;
     }
 }

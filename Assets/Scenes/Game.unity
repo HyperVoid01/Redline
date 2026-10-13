@@ -287,6 +287,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speedText: {fileID: 30098469}
   timerText: {fileID: 0}
+  healthBar: {fileID: 0}
   gameOverPanel: {fileID: 1874407865}
   winPanel: {fileID: 1185146817}
   playerBody: {fileID: 0}
@@ -1187,7 +1188,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60b53e06cdeb8094380225c8b3d576bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  startingTime: 600000
+  startingTime: 60
+  tickingStartsAt: 10
+  tickingStartPitch: 1
+  tickingEndPitch: 1.4
+  playTimeAddedSound: 1
 --- !u!4 &1339524626
 Transform:
   m_ObjectHideFlags: 0
@@ -1460,6 +1465,55 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   freezeOnWin: 1
+--- !u!1 &1787899187
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1787899189}
+  - component: {fileID: 1787899188}
+  m_Layer: 0
+  m_Name: MusicPlayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1787899188
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787899187}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 425c4cc889cf5af4c89d6300328bab1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  soundLibrary: {fileID: 11400000, guid: 7c8ae4d085cddeb419344aea94a33bd9, type: 2}
+  settingsData: {fileID: 11400000, guid: 84457d4f615a4c3469fff3e9e145715f, type: 2}
+  volume: 1
+  playOnStart: 1
+  startingSong: 0
+--- !u!4 &1787899189
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787899187}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1808287303
 GameObject:
   m_ObjectHideFlags: 0
@@ -1987,6 +2041,58 @@ MonoBehaviour:
   track: {fileID: 1956812992}
   splineIndex: 0
   sampleSpacing: 1
+--- !u!1 &2007270414
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2007270416}
+  - component: {fileID: 2007270415}
+  m_Layer: 0
+  m_Name: SoundPlayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2007270415
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2007270414}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1372647f244a0214e9bb908d42d9c804, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  soundLibrary: {fileID: 11400000, guid: 7c8ae4d085cddeb419344aea94a33bd9, type: 2}
+  settingsData: {fileID: 11400000, guid: 84457d4f615a4c3469fff3e9e145715f, type: 2}
+  volume: 1
+  spatialBlend: 1
+  minDistance: 5
+  maxDistance: 80
+  dopplerLevel: 1
+  maxOneShots: 32
+--- !u!4 &2007270416
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2007270414}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1994,6 +2100,8 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 1559917989}
+  - {fileID: 2007270416}
+  - {fileID: 1787899189}
   - {fileID: 389579883}
   - {fileID: 1339524626}
   - {fileID: 1956812993}

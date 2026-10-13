@@ -1,10 +1,11 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
-/// Put this on the player car prefab (the root is the safest place) and drag in the texts from the car's
-/// canvases. When the car appears, the texts register themselves with the scene's UIManager, so the
-/// timer (and optionally the speed) on the car's own canvas is updated by UIManager.
+/// Put this on the player car prefab (the root is the safest place) and drag in the texts and health bar
+/// from the car's canvases. When the car appears, the texts register themselves with the scene's UIManager,
+/// and the health bar follows the car's PlayerHealth live.
 ///
 /// This is needed because a scene object like UIManager can't hold a reference to something that is
 /// spawned at runtime, but a spawned object can look up the scene's UIManager.
@@ -16,12 +17,28 @@ public class CarHudBinder : MonoBehaviour
     [Tooltip("Optional: a speed text on the car's canvas. UIManager.UpdateSpeed writes to it.")]
     [SerializeField] private TMP_Text speedText;
 
+    [Header("Health")]
+    [Tooltip("The health slider on the car's canvas. Updated live from PlayerHealth.")]
+    [SerializeField] private Slider healthBar;
+    [Tooltip("Leave empty to auto-find PlayerHealth on this car (this object or its parents/children).")]
+    [SerializeField] private PlayerHealth playerHealth;
+
     private UIManager manager;
     private bool registered;
+    private bool healthSubscribed;
+
+    private void Awake()
+    {
+        if (playerHealth == null)
+            playerHealth = GetComponentInParent<PlayerHealth>();
+        if (playerHealth == null)
+            playerHealth = GetComponentInChildren<PlayerHealth>();
+    }
 
     private void OnEnable()
     {
         Register();
+        SubscribeHealth();
     }
 
     // If this object is enabled before UIManager.Awake has run (a car that is already in the scene),
@@ -29,12 +46,52 @@ public class CarHudBinder : MonoBehaviour
     private void Start()
     {
         Register();
+        SubscribeHealth();
+
+        // PlayerHealth may have fired its first event before we subscribed, so pull the current value once.
+        if (playerHealth != null)
+            OnHealthChanged(playerHealth.Current, playerHealth.maxHealth);
     }
 
     private void OnDisable()
     {
         Unregister();
+        UnsubscribeHealth();
     }
+
+    // ---------- Health ----------
+
+    private void SubscribeHealth()
+    {
+        if (healthSubscribed || playerHealth == null)
+            return;
+
+        playerHealth.onHealthChanged.AddListener(OnHealthChanged);
+        healthSubscribed = true;
+    }
+
+    private void UnsubscribeHealth()
+    {
+        if (!healthSubscribed)
+            return;
+
+        if (playerHealth != null)
+            playerHealth.onHealthChanged.RemoveListener(OnHealthChanged);
+
+        healthSubscribed = false;
+    }
+
+    private void OnHealthChanged(float current, float max)
+    {
+        if (healthBar == null)
+            return;
+
+        healthBar.minValue = 0f;
+        healthBar.maxValue = max;
+        healthBar.value = current;
+    }
+
+    // ---------- UIManager texts ----------
 
     private void Register()
     {

@@ -12,6 +12,9 @@ using UnityEngine.Rendering;
 /// Put this on the enemy car root. Put the muzzle transforms just in front of the car, pointing forward.
 /// If you don't assign a bullet prefab or hit effects, simple built-in ones are generated so it works
 /// straight away; assign your own prefabs for the final look.
+///
+/// Audio (through SoundPlayer): the MachineGun sound plays once at the start of each burst, BulletImpact
+/// plays on every hit, and BulletWhiz plays when a bullet is going to pass close to the player.
 /// </summary>
 public class EnemyGun : MonoBehaviour
 {
@@ -59,8 +62,23 @@ public class EnemyGun : MonoBehaviour
 
     [Header("Muzzle effects (all optional)")]
     public ParticleSystem[] muzzleFlashes; // matched to muzzles by index
+    [Tooltip("Optional per-shot sound. Leave empty when using the MachineGun burst sound below, or shots will be doubled.")]
     public AudioSource shotSource;
     public AudioClip shotClip;
+
+    [Header("Audio (SoundPlayer)")]
+    [Tooltip("Plays the MachineGun sound once at the start of each burst. Make burstSize x shotInterval about the length of that clip.")]
+    public bool playBurstSound = true;
+    [Tooltip("Plays the BulletImpact sound at every bullet hit.")]
+    public bool playHitSound = true;
+    [Tooltip("Plays the BulletWhiz sound when a bullet will pass close to the player without hitting.")]
+    public bool playWhizSound = true;
+    [Tooltip("Closer than this and the bullet is treated as a hit, so no whiz.")]
+    public float whizMinMiss = 1.5f;
+    [Tooltip("Farther than this and the bullet is too far away to hear as a near miss.")]
+    public float whizMaxMiss = 5f;
+    [Tooltip("Minimum seconds between whizzes, so a burst doesn't become one long hiss.")]
+    public float whizMinInterval = 0.15f;
 
     class EffectPool
     {
@@ -97,6 +115,12 @@ public class EnemyGun : MonoBehaviour
     Vector3 targetVelocity;
     bool trackingStarted;
 
+    // Audio state
+    AudioSource burstAudio;
+    float burstAudioEndTime;
+    readonly List<float> pendingWhizTimes = new List<float>();
+    float nextWhizTime;
+
     void Start()
     {
         bulletRoot = new GameObject("EnemyBullets").transform;
@@ -116,6 +140,8 @@ public class EnemyGun : MonoBehaviour
 
     void OnDestroy()
     {
+        StopBurstAudio();
+
         if (bulletRoot != null)
             Destroy(bulletRoot.gameObject);
         if (effectRoot != null)
@@ -126,6 +152,7 @@ public class EnemyGun : MonoBehaviour
     {
         UpdateVelocities();
         RecycleEffects();
+        UpdateAudio();
 
         if (target == null || (targetHealth != null && targetHealth.IsDead))
             return;
@@ -161,6 +188,7 @@ public class EnemyGun : MonoBehaviour
             if (Time.time < cooldownUntil)
                 return;
             burstLeft = burstSize;
+            StartBurstAudio();
         }
 
         if (Time.time < nextShotTime)
@@ -204,8 +232,12 @@ public class EnemyGun : MonoBehaviour
         Vector2 offset = Random.insideUnitCircle * Mathf.Tan(spreadDegrees * Mathf.Deg2Rad);
         direction = (direction + right * offset.x + up * offset.y).normalized;
 
+        Vector3 bulletVelocity = shooterVelocity + direction * bulletSpeed;
+
         EnemyBullet bullet = bulletPool.Count > 0 ? bulletPool.Dequeue() : CreateBullet();
-        bullet.Launch(this, origin, shooterVelocity + direction * bulletSpeed, damagePerHit, hitMask, bulletLifetime);
+        bullet.Launch(this, origin, bulletVelocity, damagePerHit, hitMask, bulletLifetime);
+
+        ScheduleWhiz(origin, bulletVelocity, aimPoint);
 
         if (muzzleFlashes != null && index < muzzleFlashes.Length && muzzleFlashes[index] != null)
             muzzleFlashes[index].Play();
@@ -275,6 +307,88 @@ public class EnemyGun : MonoBehaviour
         lastTargetPos = targetPos;
     }
 
+    // ---------- Audio ----------
+
+    // The MachineGun clip is a whole burst, so it plays once per burst rather than once per shot.
+    // It is started as a loop only so it follows the car, then switched to play once and removed
+    // when it has finished.
+    void StartBurstAudio()
+    {
+        if (!playBurstSound || SoundPlayer.Instance == null)
+            return;
+
+        StopBurstAudio();
+
+        burstAudio = SoundPlayer.Instance.PlayLoop(SoundID.MachineGun, transform);
+
+        if (burstAudio == null)
+            return;
+
+        burstAudio.loop = false;
+        burstAudioEndTime = Time.time + burstAudio.clip.length + 0.1f;
+    }
+
+    void StopBurstAudio()
+    {
+        if (burstAudio != null && SoundPlayer.Instance != null)
+            SoundPlayer.Instance.StopLoop(burstAudio);
+
+        burstAudio = null;
+    }
+
+    void UpdateAudio()
+    {
+        if (burstAudio != null && Time.time >= burstAudioEndTime)
+            StopBurstAudio();
+
+        if (pendingWhizTimes.Count == 0)
+            return;
+
+        for (int i = pendingWhizTimes.Count - 1; i >= 0; i--)
+        {
+            if (Time.time < pendingWhizTimes[i])
+                continue;
+
+            pendingWhizTimes.RemoveAt(i);
+
+            if (target != null && SoundPlayer.Instance != null)
+            {
+                // Slightly off to one side of the player, where the bullet actually passes.
+                Vector3 position = target.position + Random.onUnitSphere * 1.5f;
+                SoundPlayer.Instance.PlaySound(SoundID.BulletWhiz, position);
+            }
+        }
+    }
+
+    // Works out, at the moment a bullet is fired, whether it will pass close to the player
+    // without hitting, and if so queues a whiz for when it gets there.
+    void ScheduleWhiz(Vector3 origin, Vector3 bulletVelocity, Vector3 aimPoint)
+    {
+        if (!playWhizSound || Time.time < nextWhizTime)
+            return;
+
+        Vector3 relativePosition = aimPoint - origin;
+        Vector3 relativeVelocity = targetVelocity - bulletVelocity;
+        float speedSquared = Vector3.Dot(relativeVelocity, relativeVelocity);
+
+        if (speedSquared < 1e-4f)
+            return;
+
+        // Time of closest approach between the bullet and the player.
+        float time = -Vector3.Dot(relativePosition, relativeVelocity) / speedSquared;
+
+        if (time <= 0f || time > bulletLifetime)
+            return;
+
+        float missDistance = (relativePosition + relativeVelocity * time).magnitude;
+
+        if (missDistance < whizMinMiss || missDistance > whizMaxMiss)
+            return;
+
+        pendingWhizTimes.Add(Time.time + time);
+        nextWhizTime = Time.time + whizMinInterval;
+    }
+
     // ---------- Called by EnemyBullet ----------
 
     /// <summary>True for the enemy's own colliders and for bullets, so bullets never hit those.</summary>
@@ -291,6 +405,9 @@ public class EnemyGun : MonoBehaviour
 
     public void SpawnHitEffect(Vector3 point, Vector3 normal, bool onPlayer)
     {
+        if (playHitSound && SoundPlayer.Instance != null)
+            SoundPlayer.Instance.PlaySound(SoundID.BulletImpact, point);
+
         EffectPool pool = onPlayer && playerPool != null && playerPool.prefab != null ? playerPool : sceneryPool;
         if (pool == null || pool.prefab == null)
             return;

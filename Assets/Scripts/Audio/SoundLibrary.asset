@@ -1,0 +1,98 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b119aeafc47e62745b93d6f6be4bf6b5, type: 3}
+  m_Name: SoundLibrary
+  m_EditorClassIdentifier: 
+  sounds:
+  - id: 0
+    clip: {fileID: 8300000, guid: 60b9dbd15dfacad4da45c4fc21b83a3e, type: 3}
+    variations: []
+    volume: 0.4
+    pitchVariation: 0.5
+    play2D: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: af9fc32a26726b14ea96e9ab0d59422c, type: 3}
+    variations: []
+    volume: 0.8
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 2
+    clip: {fileID: 8300000, guid: 6d0da64787aa2764ebb14a9028489741, type: 3}
+    variations: []
+    volume: 0.5
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 6
+    clip: {fileID: 8300000, guid: 3e637fcf23dc2554e972c28348e26134, type: 3}
+    variations: []
+    volume: 0.1
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 8
+    clip: {fileID: 8300000, guid: 4a9cd31bdf7a7a345ae9e9d10d8fc2fc, type: 3}
+    variations: []
+    volume: 0.6
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 4
+    clip: {fileID: 8300000, guid: 113ca8fbbac504644872f08ac8225947, type: 3}
+    variations: []
+    volume: 1
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 7
+    clip: {fileID: 8300000, guid: eb0bcb014d5176c4080b4e89c9b8622c, type: 3}
+    variations: []
+    volume: 1
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 3
+    clip: {fileID: 8300000, guid: c8ccb4a2e77f8594a9b9443be13ddf41, type: 3}
+    variations: []
+    volume: 0.5
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 5
+    clip: {fileID: 8300000, guid: e969acca7a3cb9d44b142b4de47037b2, type: 3}
+    variations: []
+    volume: 1
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 9
+    clip: {fileID: 8300000, guid: 854e8a7654b18a44fa51e5f58257a458, type: 3}
+    variations: []
+    volume: 0.4
+    pitchVariation: 0.5
+    play2D: 0
+  - id: 10
+    clip: {fileID: 8300000, guid: b622f03eb04449349b3945f15b124dee, type: 3}
+    variations: []
+    volume: 0.5
+    pitchVariation: 0
+    play2D: 0
+  - id: 17
+    clip: {fileID: 8300000, guid: 352ab7c5fa1e17f499f06b73c9d29edf, type: 3}
+    variations: []
+    volume: 0.5
+    pitchVariation: 0
+    play2D: 1
+  - id: 13
+    clip: {fileID: 8300000, guid: 1814bf86f5a1f6f40886b47891661201, type: 3}
+    variations: []
+    volume: 0.2
+    pitchVariation: 0.5
+    play2D: 0
+  music:
+  - id: 0
+    clip: {fileID: 8300000, guid: 432b760fc7757334796cf5066a12b4b7, type: 3}
+    volume: 1
+  dataVersion: 1

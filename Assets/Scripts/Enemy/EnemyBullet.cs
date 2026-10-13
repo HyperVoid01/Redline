@@ -13,6 +13,12 @@ public class EnemyBullet : MonoBehaviour
 {
     [Tooltip("Radius of the sweep. Slightly bigger than the visual makes hits feel fair.")]
     public float radius = 0.12f;
+    
+    [Tooltip("Distance to the player at which the near-miss whiz plays.")]
+    public float whizDistance = 3f;
+
+    bool whizzed;
+    static Transform playerTransform;
 
     EnemyGun gun;
     Vector3 velocity;
@@ -63,6 +69,7 @@ public class EnemyBullet : MonoBehaviour
         maxAge = lifetime;
         age = 0f;
         flying = true;
+        whizzed = false;
 
         Quaternion rotation = worldVelocity.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(worldVelocity) : Quaternion.identity;
         transform.SetPositionAndRotation(position, rotation);
@@ -100,6 +107,10 @@ public class EnemyBullet : MonoBehaviour
             Finish(transform.position);
             return;
         }
+        
+        // Near miss: play the whiz once, the first time we pass close to the player.
+        if (!whizzed)
+            CheckWhiz();
 
         Vector3 start = transform.position;
         Vector3 step = velocity * dt;
@@ -132,6 +143,27 @@ public class EnemyBullet : MonoBehaviour
 
         transform.position = end;
     }
+    
+    void CheckWhiz()
+    {
+        if (playerTransform == null)
+        {
+            PlayerHealth player = FindFirstObjectByType<PlayerHealth>();
+            if (player == null)
+                return;
+
+            playerTransform = player.transform;
+        }
+
+        float sqrDist = (playerTransform.position - transform.position).sqrMagnitude;
+        if (sqrDist > whizDistance * whizDistance)
+            return;
+
+        whizzed = true;
+
+        if (SoundPlayer.Instance != null)
+            SoundPlayer.Instance.PlaySound(SoundID.BulletWhiz, transform.position);
+    }
 
     bool TrySweep(Vector3 start, Vector3 direction, float distance, out RaycastHit best)
     {
@@ -162,6 +194,8 @@ public class EnemyBullet : MonoBehaviour
         PlayerHealth health = collider.GetComponentInParent<PlayerHealth>();
         if (health != null)
             health.TakeDamage(damage);
+        
+        SoundPlayer.Instance.PlaySound(SoundID.BulletImpact, transform.position);
 
         gun.SpawnHitEffect(point, normal, health != null);
         Finish(point);
