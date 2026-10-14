@@ -5,12 +5,20 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
+    private const float KmhToMph = 0.621371f;
+
     [SerializeField] private TMP_Text speedText;
     [SerializeField] private TMP_Text timerText;
     [SerializeField] private Slider healthBar;
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private GameObject winPanel;
     [SerializeField] private GameObject hudPanel;
+
+    [Header("Pause")]
+    [Tooltip("Shown while the game is paused. Put the Resume and Settings buttons on it.")]
+    [SerializeField] private GameObject pausePanel;
+    [Tooltip("Shown when Settings is opened from the pause menu. Put the volume sliders and a Back button on it.")]
+    [SerializeField] private GameObject settingsPanel;
 
     [Header("Player car")]
     [Tooltip("Set automatically by CarSpawner when the car is placed. Only assign this by hand if the car already exists in the scene and you aren't using CarSpawner.")]
@@ -31,6 +39,7 @@ public class UIManager : MonoBehaviour
     private string lastTimeString;
     private string lastSpeedString;
     private int lastSpeed = -1;
+    private int lastSpeedKmh = -1;
 
     public void Awake()
     {
@@ -41,6 +50,23 @@ public class UIManager : MonoBehaviour
         }
 
         Instance = this;
+    }
+
+    private void OnEnable()
+    {
+        SettingsManager.Changed += OnSettingsChanged;
+    }
+
+    private void OnDisable()
+    {
+        SettingsManager.Changed -= OnSettingsChanged;
+    }
+
+    // The speed unit may have changed, so redraw the current speed in it.
+    private void OnSettingsChanged()
+    {
+        if (lastSpeedKmh >= 0)
+            UpdateSpeed(lastSpeedKmh);
     }
 
     /// <summary>
@@ -105,9 +131,18 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    public void UpdateSpeed(int speed)
+    /// <summary>Takes the speed in km/h and shows it in the unit chosen in the settings.</summary>
+    public void UpdateSpeed(int speedKmh)
     {
-        lastSpeedString = speed + " km/h";
+        lastSpeedKmh = speedKmh;
+
+        SettingsData settings = SettingsManager.Current;
+        bool mph = settings != null && settings.speedUnit == SpeedUnit.Mph;
+
+        lastSpeedString = mph
+            ? Mathf.RoundToInt(speedKmh * KmhToMph) + " mph"
+            : speedKmh + " km/h";
+
         SetText(speedText, extraSpeedTexts, lastSpeedString);
     }
 
@@ -139,6 +174,9 @@ public class UIManager : MonoBehaviour
             hudPanel.SetActive(!show);
             gameOverPanel.SetActive(show);
         }
+
+        if (show)
+            HidePauseMenus();
     }
     
     public void ShowWin(bool show)
@@ -148,6 +186,41 @@ public class UIManager : MonoBehaviour
             hudPanel.SetActive(!show);
             winPanel.SetActive(show);
         }
+
+        if (show)
+            HidePauseMenus();
+    }
+
+    /// <summary>Shows or hides the pause menu. The HUD is hidden while it is open, and the settings panel is closed.</summary>
+    public void ShowPause(bool show)
+    {
+        if (pausePanel != null)
+            pausePanel.SetActive(show);
+
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
+
+        if (hudPanel != null)
+            hudPanel.SetActive(!show);
+    }
+
+    /// <summary>Opens the settings panel in place of the pause menu, or goes back to the pause menu.</summary>
+    public void ShowSettings(bool show)
+    {
+        if (settingsPanel != null)
+            settingsPanel.SetActive(show);
+
+        if (pausePanel != null)
+            pausePanel.SetActive(!show);
+    }
+
+    private void HidePauseMenus()
+    {
+        if (pausePanel != null)
+            pausePanel.SetActive(false);
+
+        if (settingsPanel != null)
+            settingsPanel.SetActive(false);
     }
 
     // Updates the scene text (if there is one) and every registered text, dropping any that were destroyed.

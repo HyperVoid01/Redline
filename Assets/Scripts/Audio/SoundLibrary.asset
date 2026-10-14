@@ -91,6 +91,12 @@ MonoBehaviour:
     volume: 0.2
     pitchVariation: 0.5
     play2D: 0
+  - id: 18
+    clip: {fileID: 8300000, guid: 3b89729d51de3634180bd7c7009fabde, type: 3}
+    variations: []
+    volume: 0.5
+    pitchVariation: 0.2
+    play2D: 0
   music:
   - id: 0
     clip: {fileID: 8300000, guid: 432b760fc7757334796cf5066a12b4b7, type: 3}

@@ -12,9 +12,32 @@ public class InputManager : MonoBehaviour
     public float Steer => controls.Gameplay.Steer.ReadValue<float>();
     public float Throttle => controls.Gameplay.Throttle.ReadValue<float>();
     public bool Handbrake => controls.Gameplay.Handbrake.IsPressed();
-    
-    public Vector2 LookMouse => controls.Gameplay.LookMouse.ReadValue<Vector2>();
-    public Vector2 LookStick => controls.Gameplay.LookStick.ReadValue<Vector2>();
+
+    // Look input is scaled by the sensitivity settings and flipped if "invert Y" is on.
+    public Vector2 LookMouse
+    {
+        get
+        {
+            SettingsData settings = SettingsManager.Current;
+            return ScaleLook(
+                controls.Gameplay.LookMouse.ReadValue<Vector2>(),
+                settings != null ? settings.mouseSensitivity : 1f,
+                settings != null && settings.invertLookY);
+        }
+    }
+
+    public Vector2 LookStick
+    {
+        get
+        {
+            SettingsData settings = SettingsManager.Current;
+            return ScaleLook(
+                controls.Gameplay.LookStick.ReadValue<Vector2>(),
+                settings != null ? settings.stickSensitivity : 1f,
+                settings != null && settings.invertLookY);
+        }
+    }
+
     public bool Recenter => controls.Gameplay.Recenter.IsPressed();
 
     // Events (for one-shot input)
@@ -46,4 +69,14 @@ public class InputManager : MonoBehaviour
     }
 
     private void OnCycleCamera(InputAction.CallbackContext ctx)    => CycleCameraPressed?.Invoke();
+
+    private static Vector2 ScaleLook(Vector2 look, float sensitivity, bool invertY)
+    {
+        look *= sensitivity;
+
+        if (invertY)
+            look.y = -look.y;
+
+        return look;
+    }
 }

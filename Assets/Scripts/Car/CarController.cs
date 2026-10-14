@@ -12,7 +12,8 @@ public class CarController : MonoBehaviour
     [Tooltip("Tick on the player's car only. Enemy cars should leave this off.")]
     [SerializeField] private bool updatesHud = true;
 
-    [Tooltip("Tick on the player's car only. Enemy cars should leave this off and set their inputs from AI.")]
+    [Tooltip("Tick on the player's car only. Enemy cars should leave this off and set their inputs from AI. " +
+             "The steering settings (response and assist) only apply to a player controlled car.")]
     [SerializeField] private bool playerControlled = true;
 
     private const float MsToKmh = 3.6f;
@@ -140,10 +141,32 @@ public class CarController : MonoBehaviour
         int speed = Mathf.RoundToInt(SpeedKmh);
 
         // Only touch the text when the displayed number actually changes.
+        // UIManager takes km/h and converts it to the player's chosen unit.
         if (speed != lastDisplayedSpeed)
         {
             lastDisplayedSpeed = speed;
             UIManager.Instance.UpdateSpeed(speed);
+        }
+    }
+
+    // ---------------------------------------------------------------- Settings
+
+    // The steering settings are the player's choice, so AI cars ignore them.
+    private float SteeringResponse
+    {
+        get
+        {
+            SettingsData settings = SettingsManager.Current;
+            return playerControlled && settings != null ? settings.steeringResponse : 1f;
+        }
+    }
+
+    private float SteeringAssist
+    {
+        get
+        {
+            SettingsData settings = SettingsManager.Current;
+            return playerControlled && settings != null ? settings.steeringAssist : 1f;
         }
     }
 
@@ -167,7 +190,8 @@ public class CarController : MonoBehaviour
     private float CalculateSteer(float dt)
     {
         // Smooth the input so keyboard taps don't snap the wheels straight to full lock.
-        smoothedSteer = Mathf.Lerp(smoothedSteer, horizontalInput, 1f - Mathf.Exp(-carData.steerSmoothing * dt));
+        float smoothing = carData.steerSmoothing * SteeringResponse;
+        smoothedSteer = Mathf.Lerp(smoothedSteer, horizontalInput, 1f - Mathf.Exp(-smoothing * dt));
 
         // Less steering lock at high speed.
         float speed01 = carData.topSpeed > 0f ? Mathf.Clamp01(SpeedKmh / carData.topSpeed) : 0f;
@@ -183,7 +207,7 @@ public class CarController : MonoBehaviour
             DriftAngle = Vector3.SignedAngle(forward, velocity, Vector3.up);
 
             // Point the front wheels toward the direction of travel, which is counter-steering.
-            steer += DriftAngle * carData.counterSteerAssist;
+            steer += DriftAngle * carData.counterSteerAssist * SteeringAssist;
         }
         else
         {

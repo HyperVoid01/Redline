@@ -25,7 +25,8 @@ public enum SoundID
     GameOver,
     CountdownBeep,
     Wind,             // looping, volume driven by speed
-    NightAmbience     // looping crickets/owls/wind in trees (2D)
+    NightAmbience   ,  // looping crickets/owls/wind in trees (2D)
+    Explosion
 }
 
 public enum MusicID

@@ -15,6 +15,7 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("Current health, max health. Hook a health bar up to this.")]
     public UnityEvent<float, float> onHealthChanged;
     public UnityEvent onDied;
+    public ParticleSystem deathParticles;
 
     public float Current { get; private set; }
     public bool IsDead { get; private set; }
@@ -58,9 +59,10 @@ public class PlayerHealth : MonoBehaviour
 
     void Die()
     {
-        SoundPlayer.Instance.PlaySound(SoundID.Crash, transform.position);
+        SoundPlayer.Instance.PlaySound(SoundID.Explosion, transform.position);
         IsDead = true;
         onDied?.Invoke();
+        deathParticles.Play();
 
         // If your EndGame takes parameters, or the singleton accessor is named differently, change this one line.
         if (GameManager.Instance != null && !GameManager.Instance.IsGameOver)

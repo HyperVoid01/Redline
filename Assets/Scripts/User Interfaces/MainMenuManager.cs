@@ -3,6 +3,9 @@ using UnityEngine.SceneManagement;
 
 public class MainMenuManager : MonoBehaviour
 {
+    [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject settingsPanel;
+    
     [SerializeField] private Renderer targetRenderer;
     [SerializeField] private Color emissionColor = Color.red;
     [SerializeField] private float intensity = 2f;
@@ -25,6 +28,18 @@ public class MainMenuManager : MonoBehaviour
         {
             Destroy(material);
         }
+    }
+
+    public void ShowSettings()
+    {
+        mainMenuPanel.SetActive(false);
+        settingsPanel.SetActive(true);
+    }
+    
+    public void HideSettings()
+    {
+        mainMenuPanel.SetActive(true);
+        settingsPanel.SetActive(false);
     }
 
     public void SetIntensity(float value)
