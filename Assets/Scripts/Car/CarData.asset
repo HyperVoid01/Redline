@@ -20,8 +20,8 @@ MonoBehaviour:
   handbrakeForce: 3000
   driftSidewaysStiffness: 0.55
   gripLossSpeed: 12
-  gripRecoverySpeed: 2.5
+  gripRecoverySpeed: 3.5
   steerSmoothing: 8
   highSpeedSteerFactor: 0.45
-  counterSteerAssist: 0.5
-  driftAngleThreshold: 12
+  counterSteerAssist: 0.2
+  driftAngleThreshold: 10

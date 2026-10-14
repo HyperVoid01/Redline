@@ -29,9 +29,9 @@ MonoBehaviour:
   sharpAngle: {x: 70, y: 120}
   sharpRadius: {x: 30, y: 50}
   maxHeadingDrift: 140
-  hillAmplitude: 10
+  hillAmplitude: 15
   hillWavelength: 350
-  maxGradePercent: 8
+  maxGradePercent: 12
   generateBarriers: 1
   barrierPrefab: {fileID: 5982802920028818057, guid: d522ac4307c25c84a987bd38e1d005cd, type: 3}
   barrierSegmentLength: 4

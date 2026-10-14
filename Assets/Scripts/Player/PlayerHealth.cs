@@ -9,6 +9,9 @@ public class PlayerHealth : MonoBehaviour
 {
     public float maxHealth = 100f;
 
+    [Tooltip("Makes car parts fall off as health drops. Found automatically on this car if left empty.")]
+    public CarPartDetacher partDetacher;
+
     [Tooltip("Current health, max health. Hook a health bar up to this.")]
     public UnityEvent<float, float> onHealthChanged;
     public UnityEvent onDied;
@@ -19,6 +22,9 @@ public class PlayerHealth : MonoBehaviour
 
     void Awake()
     {
+        if (partDetacher == null)
+            partDetacher = GetComponentInChildren<CarPartDetacher>();
+
         ResetHealth();
     }
 
@@ -27,6 +33,10 @@ public class PlayerHealth : MonoBehaviour
         Current = maxHealth;
         IsDead = false;
         onHealthChanged?.Invoke(Current, maxHealth);
+
+        // Put every fallen part back on the car.
+        if (partDetacher != null)
+            partDetacher.RestoreParts();
     }
 
     public void TakeDamage(float amount)
@@ -36,6 +46,11 @@ public class PlayerHealth : MonoBehaviour
 
         Current = Mathf.Max(0f, Current - amount);
         onHealthChanged?.Invoke(Current, maxHealth);
+        UIManager.Instance.UpdateHealth(Current, maxHealth);
+
+        // Knock off any parts whose health threshold has been reached.
+        if (partDetacher != null)
+            partDetacher.UpdateFromHealth(Current, maxHealth);
 
         if (Current <= 0f)
             Die();

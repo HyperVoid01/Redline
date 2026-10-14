@@ -10,6 +10,9 @@ using UnityEngine.Events;
 /// TrackMaker. If the track is rebuilt later (a new Build()), everything is placed again.
 /// Call SpawnAll() yourself to restart a run.
 ///
+/// The player is placed immediately. The enemies are held back (inactive) for enemySpawnDelay seconds,
+/// then appear at their starting spots behind the player.
+///
 /// Player: assign a scene car to playerCar (it gets moved to the start), or a prefab to playerPrefab
 /// (it gets instantiated there). Enemies: assign an enemyPrefab and a count, or put scene enemies in
 /// sceneEnemies. Enemies are wired up to the player automatically. So are UIManager (speedometer)
@@ -45,6 +48,10 @@ public class CarSpawner : MonoBehaviour
     public float enemySpacing = 18f;
     [Tooltip("Enemies alternate left and right of the road centre by this much.")]
     public float laneSpacing = 2.2f;
+    [Tooltip("Seconds after the player is placed before the enemy cars appear.")]
+    public float enemySpawnDelay = 3f;
+    [Tooltip("Fires when the enemies actually appear, after the delay.")]
+    public UnityEvent onEnemiesSpawned;
 
     [Header("Timing")]
     public bool spawnOnStart = true;
@@ -60,6 +67,7 @@ public class CarSpawner : MonoBehaviour
 
     readonly List<EnemyCarController> enemies = new List<EnemyCarController>();
     int spawnedVersion = -1;
+    Coroutine enemySpawnRoutine;
 
     IEnumerator Start()
     {
@@ -90,7 +98,18 @@ public class CarSpawner : MonoBehaviour
         if (!FindPlayer())
             return;
 
+        // A restart while a previous delay is still counting down must not leave two timers running.
+        if (enemySpawnRoutine != null)
+        {
+            StopCoroutine(enemySpawnRoutine);
+            enemySpawnRoutine = null;
+        }
+
         ConfigureEnemies();
+
+        // Hold the enemies back until the delay is over.
+        for (int i = 0; i < enemies.Count; i++)
+            enemies[i].gameObject.SetActive(false);
 
         // Make room behind the player for every enemy.
         float farthestGap = 0f;
@@ -102,13 +121,37 @@ public class CarSpawner : MonoBehaviour
 
         PlacePlayer(playerDistance);
 
-        for (int i = 0; i < enemies.Count; i++)
-            enemies[i].SpawnAt(Mathf.Max(0f, playerDistance - enemies[i].StartGap));
-
         spawnedVersion = sampler.Version;
 
         HandPlayerToSceneObjects();
         onPlayerSpawned?.Invoke(playerRoot);
+
+        enemySpawnRoutine = StartCoroutine(SpawnEnemiesAfterDelay(playerDistance));
+    }
+
+    IEnumerator SpawnEnemiesAfterDelay(float playerDistance)
+    {
+        if (enemySpawnDelay > 0f)
+            yield return new WaitForSeconds(enemySpawnDelay);
+
+        // The track may have been rebuilt during the delay; SpawnAll will run again and handle it.
+        if (sampler == null || !sampler.IsBuilt)
+        {
+            enemySpawnRoutine = null;
+            yield break;
+        }
+
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            if (enemies[i] == null)
+                continue;
+
+            enemies[i].gameObject.SetActive(true);
+            enemies[i].SpawnAt(Mathf.Max(0f, playerDistance - enemies[i].StartGap));
+        }
+
+        enemySpawnRoutine = null;
+        onEnemiesSpawned?.Invoke();
     }
 
     // Scene objects can't hold a reference to a car that is spawned at runtime, so the spawner hands it over.
@@ -234,7 +277,7 @@ public class CarSpawner : MonoBehaviour
             enemy.laneOffset = i == 0 ? 0f : ((i % 2 == 1) ? -1f : 1f) * laneSpacing * ((i + 1) / 2);
             enemy.phaseOffset = Random.value * Mathf.PI * 2f;
 
-            EnemyGun gun = enemy.GetComponentInChildren<EnemyGun>();
+            EnemyGun gun = enemy.GetComponentInChildren<EnemyGun>(true);
             if (gun != null)
             {
                 gun.car = enemy;

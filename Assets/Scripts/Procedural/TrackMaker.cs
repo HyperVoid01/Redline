@@ -11,13 +11,23 @@ public class TrackMaker : MonoBehaviour
 
     private enum SectionType { Straight, Bend, Sharp }
 
+    // Remembers where a section started, so the last sections can be removed if the finish doesn't fit.
+    private struct SectionMark
+    {
+        public int pointCount;
+        public float yaw;
+        public float generated;
+    }
+
     [SerializeField] private TrackData trackData;
     [SerializeField] private bool generateOnStart = true;
     [SerializeField] private bool useRandomSeed = true;
     [SerializeField] private int seed = 12345;
 
+    [Tooltip("Empty ground kept between the edges of two different parts of the road, including barriers. Raise it if tracks still crowd each other.")]
+    [SerializeField] private float extraRoadGap = 12f;
+
     private const int MaxAttemptsPerSection = 8;
-    private const float ClearanceFactor = 1.5f;
     private const int ElevationSmoothPasses = 4;
 
     private const string GatesRootName = "Gates";
@@ -136,15 +146,26 @@ public class TrackMaker : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Smallest allowed distance between the centre lines of two different parts of the road.
+    /// It covers the road itself, the barriers on both sides, and the extra gap on top.
+    /// </summary>
+    private float GetClearance()
+    {
+        float barrierWidth = trackData.generateBarriers ? Mathf.Max(trackData.barrierSideOffset, 0f) * 2f : 0f;
+        return trackData.roadWidth + barrierWidth + Mathf.Max(0f, extraRoadGap);
+    }
+
     private List<Vector3> GeneratePoints(System.Random rng)
     {
         float step = trackData.knotSpacing;
-        float clearance = trackData.roadWidth * ClearanceFactor;
+        float clearance = GetClearance();
 
         // Points within this many knots of each other are neighbours along the road, not overlaps.
         int skip = Mathf.CeilToInt(clearance * 2f / step) + 1;
 
         List<Vector3> points = new List<Vector3> { Vector3.zero };
+        List<SectionMark> marks = new List<SectionMark>();
         float yaw = 0f; // 0 = +Z. Because it starts at 0, it is also the total drift from the start heading.
         float generated = 0f;
 
@@ -170,6 +191,8 @@ public class TrackMaker : MonoBehaviour
                     continue;
                 }
 
+                marks.Add(new SectionMark { pointCount = start, yaw = yaw, generated = generated });
+
                 yaw += yawPerKnot * knotCount;
                 generated += knotCount * step;
                 placed = true;
@@ -182,10 +205,59 @@ public class TrackMaker : MonoBehaviour
             }
         }
 
-        int finishKnots = Mathf.CeilToInt(trackData.finishStraightLength / step);
-        AppendArc(points, yaw, 0f, finishKnots, step);
+        AppendFinish(points, marks, ref yaw, ref generated, step, skip, clearance);
 
         return points;
+    }
+
+    /// <summary>
+    /// Adds the finish straight and checks it like any other section. The finish platform sticks out
+    /// past the end of the road, so that stretch is checked too. If it doesn't fit, the last section
+    /// is removed and the finish is tried again from the one before.
+    /// </summary>
+    private void AppendFinish(List<Vector3> points, List<SectionMark> marks, ref float yaw, ref float generated,
+                              float step, int skip, float clearance)
+    {
+        int finishKnots = Mathf.CeilToInt(trackData.finishStraightLength / step);
+        int platformKnots = trackData.generateFinishPlatform
+            ? Mathf.CeilToInt(trackData.finishPlatformLength / step)
+            : 0;
+
+        int removedSections = 0;
+
+        while (true)
+        {
+            int start = points.Count;
+            AppendArc(points, yaw, 0f, finishKnots + platformKnots, step);
+
+            bool clear = IsClear(points, start, skip, clearance);
+
+            // The platform part was only there for the check; it is built separately later.
+            points.RemoveRange(points.Count - platformKnots, platformKnots);
+
+            if (clear || marks.Count == 0)
+            {
+                if (!clear)
+                {
+                    Debug.LogWarning($"{name}: the finish straight overlaps the road and there is nothing left to remove.", this);
+                }
+                else if (removedSections > 0)
+                {
+                    Debug.Log($"{name}: removed {removedSections} section(s) at the end so the finish doesn't overlap the road.", this);
+                }
+                return;
+            }
+
+            // Doesn't fit: drop the finish and the last section, then try again.
+            points.RemoveRange(start, points.Count - start);
+
+            SectionMark last = marks[marks.Count - 1];
+            marks.RemoveAt(marks.Count - 1);
+            points.RemoveRange(last.pointCount, points.Count - last.pointCount);
+            yaw = last.yaw;
+            generated = last.generated;
+            removedSections++;
+        }
     }
 
     private void PlanSection(System.Random rng, float currentYaw, float step, out int knotCount, out float yawPerKnot)

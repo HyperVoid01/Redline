@@ -876,6 +876,12 @@ MonoBehaviour:
   muzzleFlashes: []
   shotSource: {fileID: 0}
   shotClip: {fileID: 0}
+  playBurstSound: 1
+  playHitSound: 1
+  playWhizSound: 1
+  whizMinMiss: 1.5
+  whizMaxMiss: 5
+  whizMinInterval: 0.15
 --- !u!1 &1877131766530948095
 GameObject:
   m_ObjectHideFlags: 0

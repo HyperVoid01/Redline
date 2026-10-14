@@ -10,6 +10,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Slider healthBar;
     [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private GameObject winPanel;
+    [SerializeField] private GameObject hudPanel;
 
     [Header("Player car")]
     [Tooltip("Set automatically by CarSpawner when the car is placed. Only assign this by hand if the car already exists in the scene and you aren't using CarSpawner.")]
@@ -119,15 +120,23 @@ public class UIManager : MonoBehaviour
         SetText(timerText, extraTimerTexts, lastTimeString);
     }
 
-    public void UpdateHealth()
+    public void UpdateHealth(float current, float max)
     {
-        
+        healthBar.maxValue = max;
+        healthBar.value = current;
+    }
+
+    public void ShowHUD(bool show)
+    {
+        if (hudPanel != null)
+            hudPanel.SetActive(show);
     }
 
     public void ShowGameOver(bool show)
     {
         if (gameOverPanel != null)
         {
+            hudPanel.SetActive(!show);
             gameOverPanel.SetActive(show);
         }
     }
@@ -136,6 +145,7 @@ public class UIManager : MonoBehaviour
     {
         if (winPanel != null)
         {
+            hudPanel.SetActive(!show);
             winPanel.SetActive(show);
         }
     }

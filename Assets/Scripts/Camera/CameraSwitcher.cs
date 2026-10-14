@@ -6,6 +6,7 @@ public class CameraSwitcher : MonoBehaviour
     [Header("Cameras")]
     [SerializeField] private Camera[] cameras;
     [SerializeField] private int startIndex = 0;
+    [SerializeField] private int hideHUDIndex;
 
     [Header("Controls")]
     [SerializeField] private bool enableNumberKeys = true; // 1-9 jump straight to a camera (keyboard only)
@@ -82,5 +83,10 @@ public class CameraSwitcher : MonoBehaviour
             InteriorCameraController interior = cam.GetComponent<InteriorCameraController>();
             if (interior != null) interior.enabled = active;
         }
+        
+        if (currentIndex == hideHUDIndex)
+            UIManager.Instance.ShowHUD(false);
+        else
+            UIManager.Instance.ShowHUD(true);
     }
 }

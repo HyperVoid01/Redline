@@ -459,6 +459,7 @@ GameObject:
   - component: {fileID: 3464698717202399901}
   - component: {fileID: 1788830303507997255}
   - component: {fileID: 8305956186763250530}
+  - component: {fileID: 5689942774573587200}
   m_Layer: 7
   m_Name: Trueno
   m_TagString: Player
@@ -692,6 +693,7 @@ MonoBehaviour:
   - {fileID: 7157780059491377996}
   - {fileID: 9147321757171006168}
   startIndex: 0
+  hideHUDIndex: 1
   enableNumberKeys: 1
 --- !u!114 &7471266933912895395
 MonoBehaviour:
@@ -852,6 +854,25 @@ MonoBehaviour:
   scrapeMaxVolume: 1
   scrapeAttack: 20
   scrapeRelease: 8
+--- !u!114 &5689942774573587200
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 896925427852214949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a4baa61ed07748489e2c317ec8be1e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  parts: []
+  carBody: {fileID: 6023794981668995554}
+  outwardSpeed: 4
+  upwardSpeed: 3
+  spinSpeed: 8
+  debrisLifetime: 10
+  ignoreCarTime: 0.5
 --- !u!1 &1093264996352098877
 GameObject:
   m_ObjectHideFlags: 0
@@ -5148,7 +5169,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.13756847, g: 1, b: 0, a: 1}
+  m_Color: {r: 1, g: 0, b: 0, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
