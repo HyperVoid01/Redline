@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 8820244903893296134}
   - component: {fileID: 7407668619033068968}
   - component: {fileID: 3948367368538215180}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: GuardRail
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -117,7 +117,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4584475491113058626}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: GuardRail
   m_TagString: Untagged
   m_Icon: {fileID: 0}

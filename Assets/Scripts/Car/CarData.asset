@@ -15,7 +15,7 @@ MonoBehaviour:
   driveSpeed: 500
   topSpeed: 150
   steeringAngle: 60
-  brakeForce: 10000
+  brakeForce: 11000
   rearDriveShare: 0.8
   handbrakeForce: 3000
   driftSidewaysStiffness: 0.55

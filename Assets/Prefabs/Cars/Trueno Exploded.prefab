@@ -1837,6 +1837,7 @@ GameObject:
   - component: {fileID: 1788830303507997255}
   - component: {fileID: 8305956186763250530}
   - component: {fileID: 5689942774573587200}
+  - component: {fileID: 7951980606311668627}
   m_Layer: 7
   m_Name: Trueno Exploded
   m_TagString: Player
@@ -2415,8 +2416,34 @@ MonoBehaviour:
   outwardSpeed: 4
   upwardSpeed: 3
   spinSpeed: 8
-  debrisLifetime: 10
-  ignoreCarTime: 1
+  debrisLifetime: 5
+  ignoreCarTime: 2
+--- !u!114 &7951980606311668627
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 896925427852214949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57091e3a65d165d4987683e83c827db7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  barrierLayers:
+    serializedVersion: 2
+    m_Bits: 256
+  minImpactSpeed: 2
+  maxImpactSpeed: 25
+  minImpactStrength: 0.4
+  impactFadeTime: 0.35
+  scrapeStrength: 0.25
+  minScrapeSpeed: 3
+  shakeStartKmh: 90
+  shakeMaxKmh: 200
+  minSpeedShake: 0.15
+  maxSpeedShake: 1
+  showDebug: 0
 --- !u!1 &936006410455833799
 GameObject:
   m_ObjectHideFlags: 0

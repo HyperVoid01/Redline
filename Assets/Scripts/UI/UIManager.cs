@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
@@ -35,6 +36,16 @@ public class UIManager : MonoBehaviour
     [Tooltip("Shown when Settings is opened from the pause menu. Put the volume sliders and a Back button on it.")]
     [SerializeField] private GameObject settingsPanel;
 
+    [Header("Controller navigation")]
+    [Tooltip("The button or slider a controller starts on when the pause menu opens (for example Resume).")]
+    [SerializeField] private Selectable pauseFirstSelected;
+    [Tooltip("The control a controller starts on when the settings panel opens (for example the first slider).")]
+    [SerializeField] private Selectable settingsFirstSelected;
+    [Tooltip("The control a controller starts on when the game over panel opens (for example Retry).")]
+    [SerializeField] private Selectable gameOverFirstSelected;
+    [Tooltip("The control a controller starts on when the win panel opens (for example Next or Menu).")]
+    [SerializeField] private Selectable winFirstSelected;
+
     [Header("Player car")]
     [Tooltip("Set automatically by CarSpawner when the car is placed. Only assign this by hand if the car already exists in the scene and you aren't using CarSpawner.")]
     [SerializeField] private Rigidbody playerBody;
@@ -60,6 +71,7 @@ public class UIManager : MonoBehaviour
     // HUD visibility is worked out from these, so no single call can override the others.
     private bool hudWanted = true;     // what the current camera wants (CameraSwitcher)
     private bool pauseShown;
+    private bool settingsShown;
     private bool gameOverShown;
     private bool winShown;
 
@@ -139,6 +151,8 @@ public class UIManager : MonoBehaviour
 
     private void Update()
     {
+        KeepControllerSelection();
+
         if (!readSpeedFromCar || playerBody == null)
             return;
 
@@ -221,6 +235,7 @@ public class UIManager : MonoBehaviour
             HidePauseMenus();
 
         RefreshHud();
+        RefreshSelection();
     }
 
     public void ShowWin(bool show)
@@ -237,12 +252,14 @@ public class UIManager : MonoBehaviour
             HidePauseMenus();
 
         RefreshHud();
+        RefreshSelection();
     }
 
     /// <summary>Shows or hides the pause menu. The HUD is hidden while it is open, and the settings panel is closed.</summary>
     public void ShowPause(bool show)
     {
         pauseShown = show;
+        settingsShown = false;
 
         if (pausePanel != null)
             pausePanel.SetActive(show);
@@ -251,21 +268,27 @@ public class UIManager : MonoBehaviour
             settingsPanel.SetActive(false);
 
         RefreshHud();
+        RefreshSelection();
     }
 
     /// <summary>Opens the settings panel in place of the pause menu, or goes back to the pause menu.</summary>
     public void ShowSettings(bool show)
     {
+        settingsShown = show;
+
         if (settingsPanel != null)
             settingsPanel.SetActive(show);
 
         if (pausePanel != null)
             pausePanel.SetActive(!show);
+
+        RefreshSelection();
     }
 
     private void HidePauseMenus()
     {
         pauseShown = false;
+        settingsShown = false;
 
         if (pausePanel != null)
             pausePanel.SetActive(false);
@@ -282,6 +305,71 @@ public class UIManager : MonoBehaviour
 
         bool visible = hudWanted && !pauseShown && !gameOverShown && !winShown;
         hudPanel.SetActive(visible);
+    }
+
+    // ---------- Controller navigation ----------
+
+    // The control a controller should be on for whichever menu is open, or null when no menu is open.
+    private Selectable GetWantedSelection()
+    {
+        if (gameOverShown)
+            return gameOverFirstSelected;
+
+        if (winShown)
+            return winFirstSelected;
+
+        if (settingsShown)
+            return settingsFirstSelected;
+
+        if (pauseShown)
+            return pauseFirstSelected;
+
+        return null;
+    }
+
+    private bool IsMenuOpen()
+    {
+        return gameOverShown || winShown || settingsShown || pauseShown;
+    }
+
+    // Puts the controller's focus on the first control of the menu that just opened, or clears it when no menu is open.
+    private void RefreshSelection()
+    {
+        EventSystem eventSystem = EventSystem.current;
+
+        if (eventSystem == null)
+            return;
+
+        Selectable wanted = GetWantedSelection();
+
+        // Clear first so the highlight is redrawn even if the same control was already selected.
+        eventSystem.SetSelectedGameObject(null);
+
+        if (wanted != null && wanted.gameObject.activeInHierarchy)
+            eventSystem.SetSelectedGameObject(wanted.gameObject);
+    }
+
+    // A mouse click on empty space clears the selection, which leaves a controller with nothing to move from.
+    // While a menu is open, put the focus back on its first control.
+    private void KeepControllerSelection()
+    {
+        if (!IsMenuOpen())
+            return;
+
+        EventSystem eventSystem = EventSystem.current;
+
+        if (eventSystem == null)
+            return;
+
+        GameObject current = eventSystem.currentSelectedGameObject;
+
+        if (current != null && current.activeInHierarchy)
+            return;
+
+        Selectable wanted = GetWantedSelection();
+
+        if (wanted != null && wanted.gameObject.activeInHierarchy)
+            eventSystem.SetSelectedGameObject(wanted.gameObject);
     }
 
     // Writes the final score, the best score and the "new high score" label onto a results panel.

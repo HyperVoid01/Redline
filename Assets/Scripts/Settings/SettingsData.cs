@@ -28,6 +28,8 @@ public class SettingsData : ScriptableObject
     [Range(0.5f, 2f)] public float steeringResponse = 1f;
     [Tooltip("Strength of the automatic counter-steer in drifts. Multiplies CarData.counterSteerAssist. 0 = off.")]
     [Range(0f, 2f)] public float steeringAssist = 1f;
+    [Tooltip("Controller vibration strength. Multiplies all rumble. 0 = off, 1 = full.")]
+    [Range(0f, 1f)] public float rumbleStrength = 1f;
 
     [Header("Interface")]
     public SpeedUnit speedUnit = SpeedUnit.Kmh;
@@ -56,6 +58,7 @@ public class SettingsData : ScriptableObject
         invertLookY = false;
         steeringResponse = 1f;
         steeringAssist = 1f;
+        rumbleStrength = 1f;
 
         speedUnit = SpeedUnit.Kmh;
 

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 289cd5e6e748b524da85f2eefe66f32c, type: 3}
   m_Name: TrackData
   m_EditorClassIdentifier: 
-  totalLength: 10000
+  totalLength: 4000
   startStraightLength: 60
   finishStraightLength: 60
   roadWidth: 24

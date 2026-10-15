@@ -15,7 +15,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float gameOverDelay = 2f;
 
     [Header("Pause")]
-    [Tooltip("Pressing Escape pauses and resumes the game. Escape also backs out of the settings panel.")]
+    [Tooltip("Pressing Escape (keyboard) or Start (controller) pauses and resumes the game. Escape and the controller's B button also back out of the settings panel.")]
     [SerializeField] private bool pauseWithEscape = true;
 
     public bool IsGameOver { get; private set; }
@@ -61,8 +61,13 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (pauseWithEscape && EscapePressed())
+        if (!pauseWithEscape)
+            return;
+
+        if (PausePressed())
             HandleEscape();
+        else if (BackPressed())
+            HandleBack();
     }
 
     private void OnDestroy()
@@ -185,6 +190,7 @@ public class GameManager : MonoBehaviour
             UIManager.Instance.ShowSettings(false);
     }
 
+    // Escape or Start: pause, back out of settings, or resume.
     private void HandleEscape()
     {
         if (IsGameOver)
@@ -193,6 +199,18 @@ public class GameManager : MonoBehaviour
         if (!IsPaused)
             PauseGame();
         else if (IsSettingsOpen)
+            CloseSettings();
+        else
+            ResumeGame();
+    }
+
+    // Controller B: only does something while paused. It never pauses the game by itself.
+    private void HandleBack()
+    {
+        if (IsGameOver || !IsPaused)
+            return;
+
+        if (IsSettingsOpen)
             CloseSettings();
         else
             ResumeGame();
@@ -208,12 +226,26 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    private static bool EscapePressed()
+    // Escape on the keyboard, or Start on a controller.
+    private static bool PausePressed()
     {
 #if ENABLE_INPUT_SYSTEM
-        return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
+        bool keyboard = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
+        bool gamepad = Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame;
+        return keyboard || gamepad;
 #else
-        return Input.GetKeyDown(KeyCode.Escape);
+        // JoystickButton7 is Start on an Xbox style controller.
+        return Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.JoystickButton7);
+#endif
+    }
+
+    // B on a controller (the east button, so it is Circle on a PlayStation controller).
+    private static bool BackPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Gamepad.current != null && Gamepad.current.buttonEast.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.JoystickButton1);
 #endif
     }
 
