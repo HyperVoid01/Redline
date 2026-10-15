@@ -67,6 +67,22 @@ public class SampleEngine : MonoBehaviour
 
     private void Update()
     {
+        GameManager gm = GameManager.Instance;
+
+        if (gm != null)
+        {
+            // Game over / win froze the game: mute the engine completely.
+            if (gm.IsFrozen)
+            {
+                Silence();
+                return;
+            }
+
+            // Paused: AudioListener.pause holds the sound, leave everything as it is.
+            if (gm.IsPaused)
+                return;
+        }
+
         load = Mathf.Lerp(load, targetLoad, 1f - Mathf.Exp(-loadResponse * Time.deltaTime));
 
         // Find the two bands surrounding the current RPM.
@@ -92,6 +108,17 @@ public class SampleEngine : MonoBehaviour
             else if (i == hi) w = wHi;
 
             ApplyBand(i, w);
+        }
+    }
+
+    private void Silence()
+    {
+        for (int i = 0; i < bands.Length; i++)
+        {
+            onSources[i].Volume = 0f;
+
+            if (offSources[i] != null)
+                offSources[i].Volume = 0f;
         }
     }
 

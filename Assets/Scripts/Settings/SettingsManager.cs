@@ -185,6 +185,8 @@ public class SettingsManager : MonoBehaviour
     /// <summary>Puts every setting back to its starting value. Hook this to the Reset button.</summary>
     public void ResetToDefaults()
     {
+        SoundPlayer.Instance.PlaySound(SoundID.Click, Vector3.zero);
+        
         data.ResetToDefaults();
         ApplyGraphics();
         ApplyDisplay();

@@ -40,6 +40,11 @@ public class CrossfadeLooper : MonoBehaviour
 
     private void Update()
     {
+        // While the listener is paused, isPlaying can't be trusted for the handover
+        // logic below, and restarting voices here would blip sound on resume.
+        if (AudioListener.pause)
+            return;
+
         AudioSource active = aActive ? a : b;
         AudioSource other = aActive ? b : a;
 

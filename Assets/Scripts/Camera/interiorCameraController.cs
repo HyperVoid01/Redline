@@ -29,8 +29,6 @@ public class InteriorCameraController : MonoBehaviour
     [SerializeField] private float maxYaw = 120f;
     [SerializeField] private float maxLookUp = 60f;
     [SerializeField] private float maxLookDown = 45f;
-    [Tooltip("Hold to smoothly return the view to straight ahead.")]
-    [SerializeField] private bool lockCursor = true;
 
     [Header("Head Movement (car-local)")]
     [Tooltip("Metres of head movement per m/s² of acceleration. x = sideways, y = vertical, z = forward/back. Flip a sign if a direction feels backwards.")]
@@ -92,7 +90,6 @@ public class InteriorCameraController : MonoBehaviour
     private float trauma;
 
     private bool initialised;
-    private bool cursorLocked;
 
     private void Awake()
     {
@@ -133,17 +130,6 @@ public class InteriorCameraController : MonoBehaviour
         smoothedAccel = Vector3.zero;
         trauma = 0f;
         lastVelocity = GetVelocity();
-        cursorLocked = false;
-        ApplyCursor(lockCursor);
-    }
-
-    private void OnDisable()
-    {
-        if (initialised && lockCursor)
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
     }
 
     private void FixedUpdate()
@@ -175,10 +161,16 @@ public class InteriorCameraController : MonoBehaviour
     // Everything visual happens in LateUpdate, after the car has moved.
     private void LateUpdate()
     {
-        float dt = Mathf.Min(Time.deltaTime, MaxStepTime);
-        bool gameOver = GameManager.Instance != null && GameManager.Instance.IsGameOver;
+        GameManager gm = GameManager.Instance;
 
-        ApplyCursor(lockCursor && !gameOver);
+        // Paused: hold the view exactly where it is.
+        if (gm != null && gm.IsPaused)
+        {
+            return;
+        }
+
+        float dt = Mathf.Min(Time.deltaTime, MaxStepTime);
+        bool gameOver = gm != null && gm.IsGameOver;
 
         if (!gameOver)
         {
@@ -219,18 +211,6 @@ public class InteriorCameraController : MonoBehaviour
 
         yaw = Mathf.Clamp(yaw, -maxYaw, maxYaw);
         pitch = Mathf.Clamp(pitch, -maxLookUp, maxLookDown);
-    }
-
-    private void ApplyCursor(bool shouldLock)
-    {
-        if (shouldLock == cursorLocked)
-        {
-            return;
-        }
-
-        cursorLocked = shouldLock;
-        Cursor.lockState = shouldLock ? CursorLockMode.Locked : CursorLockMode.None;
-        Cursor.visible = !shouldLock;
     }
 
     // ---------------------------------------------------------------- Driving feel

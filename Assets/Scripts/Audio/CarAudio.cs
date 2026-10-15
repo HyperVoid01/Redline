@@ -97,6 +97,24 @@ public class CarAudio : MonoBehaviour
         if (player == null)
             return;
 
+        GameManager gm = GameManager.Instance;
+
+        if (gm != null)
+        {
+            // Game over / win froze the game: kill every loop and don't restart them.
+            if (gm.IsFrozen)
+            {
+                if (loopsCreated)
+                    StopAudio();
+
+                return;
+            }
+
+            // Paused: AudioListener.pause already holds the sound, nothing to update.
+            if (gm.IsPaused)
+                return;
+        }
+
         // Created here rather than in Start so the car works no matter
         // which object's Awake/Start runs first (the player car is spawned at runtime).
         EnsureLoops(player);
@@ -162,6 +180,9 @@ public class CarAudio : MonoBehaviour
         scrapeLoop = null;
         enemyEngineSource = null;
         loopsCreated = false;
+
+        skidLevel = 0f;
+        scrapeLevel = 0f;
     }
 
     // ---------------------------------------------------------------- Loops

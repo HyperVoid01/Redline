@@ -94,11 +94,38 @@ MonoBehaviour:
   - id: 18
     clip: {fileID: 8300000, guid: 3b89729d51de3634180bd7c7009fabde, type: 3}
     variations: []
-    volume: 0.5
+    volume: 0.6
     pitchVariation: 0.2
-    play2D: 0
+    play2D: 1
   music:
   - id: 0
     clip: {fileID: 8300000, guid: 432b760fc7757334796cf5066a12b4b7, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: 57f0dc00e18ec004ebc66f79545b3a64, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: 71a848ffe57cdd7408c6863dc286948f, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: 4e2730286ec24764aa9e1705466ad7e4, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: 3255b686f247d154ab42836ebeb8f6de, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: dbbe16383451c4648beaf4ea7fda397c, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: 94a0b9662e00e5a4ba018d0839b7796f, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: 366d1bcfb8c4e634e87a58fae982111d, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: 823dbd1982e77ae40bc8ccb8209f191e, type: 3}
+    volume: 1
+  - id: 1
+    clip: {fileID: 8300000, guid: 823dbd1982e77ae40bc8ccb8209f191e, type: 3}
     volume: 1
   dataVersion: 1

@@ -61,6 +61,7 @@ public class SoundLibrary : ScriptableObject
     [System.Serializable]
     public class MusicEntry
     {
+        [Tooltip("Add several entries with the same ID to make a playlist. They play in random order.")]
         public MusicID id;
         public AudioClip clip;
 
@@ -72,6 +73,7 @@ public class SoundLibrary : ScriptableObject
     public SoundEntry[] sounds;
 
     [Header("Music")]
+    [Tooltip("Several entries can share one ID (for example Gameplay). Those become a shuffled playlist.")]
     public MusicEntry[] music;
 
     // Used to give entries that existed before per-clip volume was added a volume of 1,
@@ -79,7 +81,9 @@ public class SoundLibrary : ScriptableObject
     [SerializeField, HideInInspector] private int dataVersion;
 
     private Dictionary<SoundID, SoundEntry> soundLookup;
-    private Dictionary<MusicID, MusicEntry> musicLookup;
+    private Dictionary<MusicID, List<MusicEntry>> musicLookup;
+
+    private static readonly List<MusicEntry> NoMusic = new List<MusicEntry>();
 
     // Warn once per missing ID instead of every call (a missing machine gun
     // sound would otherwise spam the console dozens of times a second).
@@ -140,7 +144,7 @@ public class SoundLibrary : ScriptableObject
             return;
 
         soundLookup = new Dictionary<SoundID, SoundEntry>();
-        musicLookup = new Dictionary<MusicID, MusicEntry>();
+        musicLookup = new Dictionary<MusicID, List<MusicEntry>>();
 
         if (sounds != null)
         {
@@ -159,6 +163,7 @@ public class SoundLibrary : ScriptableObject
             }
         }
 
+        // Music entries may share an ID: together they form a playlist.
         if (music != null)
         {
             foreach (MusicEntry entry in music)
@@ -166,13 +171,13 @@ public class SoundLibrary : ScriptableObject
                 if (entry == null)
                     continue;
 
-                if (musicLookup.ContainsKey(entry.id))
+                if (!musicLookup.TryGetValue(entry.id, out List<MusicEntry> list))
                 {
-                    Debug.LogWarning("Duplicate music entry in SoundLibrary: " + entry.id);
-                    continue;
+                    list = new List<MusicEntry>();
+                    musicLookup.Add(entry.id, list);
                 }
 
-                musicLookup.Add(entry.id, entry);
+                list.Add(entry);
             }
         }
     }
@@ -227,16 +232,23 @@ public class SoundLibrary : ScriptableObject
 
     // ---------- Music ----------
 
-    /// <summary>Returns the entry for a music ID, or null if it is not in the library.</summary>
-    public MusicEntry GetMusicEntry(MusicID id)
+    /// <summary>Returns every music entry with this ID (a playlist). Empty if there are none. Do not modify the list.</summary>
+    public List<MusicEntry> GetMusicEntries(MusicID id)
     {
         EnsureLookups();
 
-        if (musicLookup.TryGetValue(id, out MusicEntry entry))
-            return entry;
+        if (musicLookup.TryGetValue(id, out List<MusicEntry> list))
+            return list;
 
         WarnOnce("Music not found: " + id);
-        return null;
+        return NoMusic;
+    }
+
+    /// <summary>Returns the first entry for a music ID, or null if it is not in the library.</summary>
+    public MusicEntry GetMusicEntry(MusicID id)
+    {
+        List<MusicEntry> list = GetMusicEntries(id);
+        return list.Count > 0 ? list[0] : null;
     }
 
     // Kept so existing calls still work.

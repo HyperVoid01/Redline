@@ -14,6 +14,21 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject winPanel;
     [SerializeField] private GameObject hudPanel;
 
+    [Header("Score")]
+    [Tooltip("Live score on the HUD.")]
+    [SerializeField] private TMP_Text scoreText;
+
+    [Header("Game over results")]
+    [SerializeField] private TMP_Text gameOverScoreText;
+    [SerializeField] private TMP_Text gameOverBestText;
+    [Tooltip("An object (for example a 'New High Score!' label) that is only shown when the run set a new best.")]
+    [SerializeField] private GameObject gameOverNewBestLabel;
+
+    [Header("Win results")]
+    [SerializeField] private TMP_Text winScoreText;
+    [SerializeField] private TMP_Text winBestText;
+    [SerializeField] private GameObject winNewBestLabel;
+
     [Header("Pause")]
     [Tooltip("Shown while the game is paused. Put the Resume and Settings buttons on it.")]
     [SerializeField] private GameObject pausePanel;
@@ -24,7 +39,8 @@ public class UIManager : MonoBehaviour
     [Tooltip("Set automatically by CarSpawner when the car is placed. Only assign this by hand if the car already exists in the scene and you aren't using CarSpawner.")]
     [SerializeField] private Rigidbody playerBody;
     [Tooltip("Read the speed straight from the car's Rigidbody every frame. " +
-             "Turn this off if your car controller already calls UpdateSpeed itself.")]
+             "Turn this off if your car controller already calls UpdateSpeed itself. " +
+             "CarController already does, so this can normally be off.")]
     [SerializeField] private bool readSpeedFromCar = true;
 
     public static UIManager Instance;
@@ -40,6 +56,12 @@ public class UIManager : MonoBehaviour
     private string lastSpeedString;
     private int lastSpeed = -1;
     private int lastSpeedKmh = -1;
+
+    // HUD visibility is worked out from these, so no single call can override the others.
+    private bool hudWanted = true;     // what the current camera wants (CameraSwitcher)
+    private bool pauseShown;
+    private bool gameOverShown;
+    private bool winShown;
 
     public void Awake()
     {
@@ -146,6 +168,8 @@ public class UIManager : MonoBehaviour
         SetText(speedText, extraSpeedTexts, lastSpeedString);
     }
 
+    // Kept so older scripts that still call it (TimeManager, CarHudBinder) keep compiling.
+    // Delete it, RegisterTimerText and timerText once nothing uses the timer any more.
     public void UpdateTime(int totalSeconds)
     {
         int minutes = totalSeconds / 60;
@@ -155,53 +179,78 @@ public class UIManager : MonoBehaviour
         SetText(timerText, extraTimerTexts, lastTimeString);
     }
 
+    /// <summary>Shows the live score on the HUD. ScoreManager calls this when the number changes.</summary>
+    public void UpdateScore(int score)
+    {
+        if (scoreText != null)
+            scoreText.text = "Score: " + ScoreManager.Format(score);
+    }
+
     public void UpdateHealth(float current, float max)
     {
+        if (healthBar == null)
+            return;
+
         healthBar.maxValue = max;
         healthBar.value = current;
     }
 
+    // ---------- Panels ----------
+
+    /// <summary>
+    /// What the current camera wants (CameraSwitcher calls this). The HUD still stays hidden
+    /// while the pause menu, game over panel or win panel is up.
+    /// </summary>
     public void ShowHUD(bool show)
     {
-        if (hudPanel != null)
-            hudPanel.SetActive(show);
+        hudWanted = show;
+        RefreshHud();
     }
 
     public void ShowGameOver(bool show)
     {
+        gameOverShown = show;
+
+        if (show)
+            FillResults(gameOverScoreText, gameOverBestText, gameOverNewBestLabel);
+
         if (gameOverPanel != null)
-        {
-            hudPanel.SetActive(!show);
             gameOverPanel.SetActive(show);
-        }
 
         if (show)
             HidePauseMenus();
+
+        RefreshHud();
     }
-    
+
     public void ShowWin(bool show)
     {
+        winShown = show;
+
+        if (show)
+            FillResults(winScoreText, winBestText, winNewBestLabel);
+
         if (winPanel != null)
-        {
-            hudPanel.SetActive(!show);
             winPanel.SetActive(show);
-        }
 
         if (show)
             HidePauseMenus();
+
+        RefreshHud();
     }
 
     /// <summary>Shows or hides the pause menu. The HUD is hidden while it is open, and the settings panel is closed.</summary>
     public void ShowPause(bool show)
     {
+        pauseShown = show;
+
         if (pausePanel != null)
             pausePanel.SetActive(show);
 
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
 
-        if (hudPanel != null)
-            hudPanel.SetActive(!show);
+        RefreshHud();
     }
 
     /// <summary>Opens the settings panel in place of the pause menu, or goes back to the pause menu.</summary>
@@ -216,11 +265,42 @@ public class UIManager : MonoBehaviour
 
     private void HidePauseMenus()
     {
+        pauseShown = false;
+
         if (pausePanel != null)
             pausePanel.SetActive(false);
 
         if (settingsPanel != null)
             settingsPanel.SetActive(false);
+    }
+
+    // The one place the HUD is shown or hidden.
+    private void RefreshHud()
+    {
+        if (hudPanel == null)
+            return;
+
+        bool visible = hudWanted && !pauseShown && !gameOverShown && !winShown;
+        hudPanel.SetActive(visible);
+    }
+
+    // Writes the final score, the best score and the "new high score" label onto a results panel.
+    private static void FillResults(TMP_Text scoreLabel, TMP_Text bestLabel, GameObject newBestLabel)
+    {
+        ScoreManager scores = ScoreManager.Instance;
+
+        int score = scores != null ? scores.Score : 0;
+        int best = scores != null ? scores.HighScore : ScoreManager.SavedHighScore;
+        bool isNewBest = scores != null && scores.IsNewHighScore;
+
+        if (scoreLabel != null)
+            scoreLabel.text = "Score: " + ScoreManager.Format(score);
+
+        if (bestLabel != null)
+            bestLabel.text = "Best: " + ScoreManager.Format(best);
+
+        if (newBestLabel != null)
+            newBestLabel.SetActive(isNewBest);
     }
 
     // Updates the scene text (if there is one) and every registered text, dropping any that were destroyed.

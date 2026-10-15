@@ -23,6 +23,15 @@ public class GameManager : MonoBehaviour
     public bool IsPaused { get; private set; }
     public bool IsSettingsOpen { get; private set; }
 
+    /// <summary>True once the game has actually frozen after game over or win. Car audio silences itself on this.</summary>
+    public bool IsFrozen { get; private set; }
+
+    /// <summary>True while player controls (look, camera switch, driving) should be ignored.</summary>
+    public bool InputBlocked => IsPaused;
+
+    /// <summary>True while the mouse cursor should be visible and free.</summary>
+    public bool WantsCursorFree => IsPaused || IsGameOver;
+
     public static GameManager Instance;
 
     // Handle for the looping night ambience, kept so it can be stopped later.
@@ -81,6 +90,7 @@ public class GameManager : MonoBehaviour
         IsWon = false;
         IsPaused = false;
         IsSettingsOpen = false;
+        IsFrozen = false;
         Time.timeScale = 1f;
         AudioListener.pause = false;
 
@@ -91,9 +101,9 @@ public class GameManager : MonoBehaviour
             UIManager.Instance.ShowWin(false);
         }
 
-        if (TimeManager.Instance != null)
+        if (ScoreManager.Instance != null)
         {
-            TimeManager.Instance.StartTimer();
+            ScoreManager.Instance.ResetRun();
         }
 
         StartNightAmbience();
@@ -215,12 +225,14 @@ public class GameManager : MonoBehaviour
         if (IsGameOver)
             return;
 
-        // The run is over straight away: no more pausing, no win after this, and the timer stops.
+        // The run is over straight away: no more pausing and no win after this.
         IsGameOver = true;
 
-        if (TimeManager.Instance != null)
+        // The score is locked in (and the best saved) at the moment of the crash,
+        // not after the game over delay.
+        if (ScoreManager.Instance != null)
         {
-            TimeManager.Instance.StopTimer();
+            ScoreManager.Instance.FinishRun(false);
         }
 
         if (gameOverDelay <= 0f)
@@ -250,6 +262,9 @@ public class GameManager : MonoBehaviour
 
         StopNightAmbience();
 
+        // Set before the game over sound so car audio shuts up but the sting still plays.
+        IsFrozen = true;
+
         if (SoundPlayer.Instance != null)
             SoundPlayer.Instance.PlaySound2D(SoundID.GameOver);
 
@@ -260,16 +275,17 @@ public class GameManager : MonoBehaviour
     // Reached the finish platform
     public void WinGame()
     {
-        // Marking the game as over also stops the timer running out after a win.
+        // Marking the game as over also stops a loss being triggered after a win.
         if (IsGameOver)
             return;
 
         IsGameOver = true;
         IsWon = true;
 
-        if (TimeManager.Instance != null)
+        // Adds the finish bonus, then saves the best score, before the win panel reads it.
+        if (ScoreManager.Instance != null)
         {
-            TimeManager.Instance.StopTimer();
+            ScoreManager.Instance.FinishRun(true);
         }
 
         if (UIManager.Instance != null)
@@ -282,6 +298,7 @@ public class GameManager : MonoBehaviour
 
         if (freezeOnWin)
         {
+            IsFrozen = true;
             Time.timeScale = 0f;
         }
     }
