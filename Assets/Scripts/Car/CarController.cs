@@ -16,6 +16,33 @@ public class CarController : MonoBehaviour
              "The steering settings (response and assist) only apply to a player controlled car.")]
     [SerializeField] private bool playerControlled = true;
 
+    [Header("Steering feel (player only)")]
+    [Tooltip("Makes small stick movements steer less, so barely turning really is barely turning. Full lock is unchanged.")]
+    [SerializeField] private bool useSteerCurve = true;
+    [Tooltip("1 = linear (old behaviour). 1.5 to 2 = much finer control near the centre. Keyboard is unaffected, it is always full or nothing.")]
+    [SerializeField, Range(1f, 3f)] private float steerCurvePower = 1.6f;
+
+    [Header("Stability (stops the rear stepping out)")]
+    [Tooltip("Multiplies the rear wheels' sideways grip (outside of handbrake drifts). Above 1 makes the car understeer a little instead of sliding. " +
+             "1 = old behaviour. Try 1.2 to 1.6.")]
+    [SerializeField, Range(0.5f, 3f)] private float rearGripMultiplier = 1.3f;
+
+    [Tooltip("Cuts the drive torque on an axle while its wheels are slipping, so the tyres keep their grip. Not active while the handbrake is held. " +
+             "This is the car's own switch. On the player's car the Traction Control toggle in the settings menu must also be on.")]
+    [SerializeField] private bool tractionControl = true;
+    [Tooltip("Wheel slip (WheelHit slip, 0 = full grip) where the torque starts being cut.")]
+    [SerializeField, Range(0.05f, 1.5f)] private float tractionStartSlip = 0.4f;
+    [Tooltip("Wheel slip where the torque is cut as far as it goes.")]
+    [SerializeField, Range(0.1f, 2f)] private float tractionFullSlip = 0.9f;
+    [Tooltip("Fraction of the torque kept at full slip. 0 = cut it completely, 1 = no cut.")]
+    [SerializeField, Range(0f, 1f)] private float tractionMinTorque = 0.25f;
+
+    [Header("Death")]
+    [Tooltip("Ignore the player's driving input once the car's health reaches 0, so the wreck can't be driven during the explosion.")]
+    [SerializeField] private bool disableInputWhenDead = true;
+    [Tooltip("Found automatically on this car if left empty. Only used on the player's car.")]
+    [SerializeField] private PlayerHealth health;
+
     private const float MsToKmh = 3.6f;
 
     private float horizontalInput, verticalInput;
@@ -54,6 +81,23 @@ public class CarController : MonoBehaviour
     public bool IsDrifting =>
         carData != null && SpeedKmh > 10f && Mathf.Abs(DriftAngle) > carData.driftAngleThreshold;
 
+    /// <summary>True when traction control is actually in effect: the car's own toggle, and the player's setting for the player's car.</summary>
+    public bool TractionControlActive
+    {
+        get
+        {
+            if (!tractionControl)
+                return false;
+
+            // AI cars ignore the player's setting.
+            if (!playerControlled)
+                return true;
+
+            SettingsData settings = SettingsManager.Current;
+            return settings == null || settings.tractionControl;
+        }
+    }
+
     /// <summary>Lets AI drivers set inputs on cars that are not player controlled.</summary>
     public void SetInputs(float steer, float throttle, bool useHandbrake)
     {
@@ -67,6 +111,13 @@ public class CarController : MonoBehaviour
         if (rigidBody == null)
         {
             rigidBody = GetComponent<Rigidbody>();
+        }
+
+        if (playerControlled && health == null)
+        {
+            health = GetComponentInParent<PlayerHealth>();
+            if (health == null)
+                health = GetComponentInChildren<PlayerHealth>();
         }
 
         if (carData == null)
@@ -87,12 +138,31 @@ public class CarController : MonoBehaviour
     {
         if (playerControlled && InputManager.Instance != null)
         {
-            horizontalInput = InputManager.Instance.Steer;
-            verticalInput = InputManager.Instance.Throttle;
-            handbrake = InputManager.Instance.Handbrake;
+            if (disableInputWhenDead && health != null && health.IsDead)
+            {
+                // Wrecked: no steering, throttle or handbrake. The car just rolls on.
+                horizontalInput = 0f;
+                verticalInput = 0f;
+                handbrake = false;
+            }
+            else
+            {
+                horizontalInput = ShapeSteerInput(InputManager.Instance.Steer);
+                verticalInput = InputManager.Instance.Throttle;
+                handbrake = InputManager.Instance.Handbrake;
+            }
         }
 
         UpdateHud();
+    }
+
+    // Eases small stick deflections so they steer gently, while full deflection still gives full lock.
+    private float ShapeSteerInput(float raw)
+    {
+        if (!useSteerCurve || steerCurvePower <= 1f)
+            return raw;
+
+        return Mathf.Sign(raw) * Mathf.Pow(Mathf.Abs(raw), steerCurvePower);
     }
 
     private void FixedUpdate()
@@ -118,6 +188,13 @@ public class CarController : MonoBehaviour
         // Split the same total torque between the front and rear axles.
         float frontMotor = motor * 2f * (1f - carData.rearDriveShare);
         float rearMotor = motor * 2f * carData.rearDriveShare;
+
+        // Traction control: ease off an axle's torque while its tyres are slipping.
+        if (!handbrake && TractionControlActive)
+        {
+            frontMotor *= TractionScale(wheel1, wheel2);
+            rearMotor *= TractionScale(wheel3, wheel4);
+        }
 
         // Normal braking uses all wheels. The handbrake only locks the rear wheels,
         // which is what makes the tail swing out.
@@ -170,6 +247,24 @@ public class CarController : MonoBehaviour
         }
     }
 
+    // ---------------------------------------------------------------- Traction
+
+    // 1 = full torque, down to tractionMinTorque when the worse of the two wheels is slipping hard.
+    private float TractionScale(WheelCollider a, WheelCollider b)
+    {
+        float slip = Mathf.Max(WheelSlip(a), WheelSlip(b));
+        float t = Mathf.InverseLerp(tractionStartSlip, Mathf.Max(tractionStartSlip + 0.01f, tractionFullSlip), slip);
+        return Mathf.Lerp(1f, tractionMinTorque, t);
+    }
+
+    private static float WheelSlip(WheelCollider wheel)
+    {
+        if (!wheel.GetGroundHit(out WheelHit hit))
+            return 0f;
+
+        return Mathf.Max(Mathf.Abs(hit.sidewaysSlip), Mathf.Abs(hit.forwardSlip));
+    }
+
     // ---------------------------------------------------------------- Drift
 
     private void UpdateRearGrip(float dt)
@@ -180,9 +275,12 @@ public class CarController : MonoBehaviour
         float rate = handbrake ? carData.gripLossSpeed : carData.gripRecoverySpeed;
         rearGripLoss = Mathf.MoveTowards(rearGripLoss, target, rate * dt);
 
+        // Normal rear grip, optionally boosted so the rear is harder to break loose than the front.
+        float normalStiffness = baseRearSideways.stiffness * rearGripMultiplier;
+
         // WheelFrictionCurve is a struct, so copy it, change it, and assign it back.
         WheelFrictionCurve friction = baseRearSideways;
-        friction.stiffness = Mathf.Lerp(baseRearSideways.stiffness, carData.driftSidewaysStiffness, rearGripLoss);
+        friction.stiffness = Mathf.Lerp(normalStiffness, carData.driftSidewaysStiffness, rearGripLoss);
         wheel3.sidewaysFriction = friction;
         wheel4.sidewaysFriction = friction;
     }

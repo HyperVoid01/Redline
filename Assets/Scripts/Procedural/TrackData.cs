@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(fileName = "NewTrackData", menuName = "Scriptable Objects/Track Data")]
 public class TrackData : ScriptableObject
@@ -65,25 +66,21 @@ public class TrackData : ScriptableObject
     public GameObject gatePrefab;
     public float firstGateDistance = 150f;
     public float gateSpacing = 250f;
-    
-    [Header("Finish Platform")]
-    public bool generateFinishPlatform = true;
-    [Tooltip("How far the platform extends past the end of the road, in metres.")]
-    public float finishPlatformLength = 30f;
-    [Tooltip("Extra width on each side of the road.")]
-    public float finishPlatformSideMargin = 6f;
-    [Tooltip("Slab thickness. Make it thicker if the land beneath the end of the road looks too low.")]
-    public float finishPlatformThickness = 3f;
-    [Tooltip("Optional. Falls back to the road material.")]
-    public Material finishPlatformMaterial;
-    [Tooltip("Optional decoration placed in the middle of the platform, e.g. a finish arch.")]
-    public GameObject finishDecorPrefab;
+
+    [Header("Finish")]
+    [Tooltip("Placed on the road at the finish line, facing down the track. It must contain a trigger collider with a FinishTrigger " +
+             "that spans the road width. Leave empty for no finish line.")]
+    [FormerlySerializedAs("finishDecorPrefab")]
+    public GameObject finishPrefab;
+    [Tooltip("Road, land and vegetation that carry on past the finish line, in metres, so the player doesn't drive into a void.")]
+    public float runoutLength = 80f;
 
     private void OnValidate()
     {
         totalLength = Mathf.Max(100f, totalLength);
         startStraightLength = Mathf.Max(0f, startStraightLength);
         finishStraightLength = Mathf.Max(0f, finishStraightLength);
+        runoutLength = Mathf.Max(0f, runoutLength);
         roadWidth = Mathf.Max(2f, roadWidth);
         uvTileLength = Mathf.Max(1f, uvTileLength);
         sampleSpacing = Mathf.Clamp(sampleSpacing, 0.5f, 10f);
@@ -121,10 +118,6 @@ public class TrackData : ScriptableObject
 
         gateSpacing = Mathf.Max(0f, gateSpacing);
         firstGateDistance = Mathf.Max(0f, firstGateDistance);
-        
-        finishPlatformLength = Mathf.Max(5f, finishPlatformLength);
-        finishPlatformSideMargin = Mathf.Max(0f, finishPlatformSideMargin);
-        finishPlatformThickness = Mathf.Max(0.5f, finishPlatformThickness);
     }
 
     private static Vector2 ClampRange(Vector2 range, float minimum)

@@ -4,17 +4,33 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Rigidbody))]
 public class CarRumble : MonoBehaviour
 {
-    [Header("Barrier Collisions")]
+    [Header("Master")]
+    [Tooltip("Turns all controller rumble from this car on or off. The Rumble Strength in the settings menu still scales everything.")]
+    [SerializeField] private bool enableRumble = true;
+
+    // ------------------------------------------------------------------ Barrier hits
+
+    [Header("Barrier Impacts")]
+    [Tooltip("Thud when the car hits a barrier.")]
+    [SerializeField] private bool barrierImpacts = true;
     [SerializeField] private LayerMask barrierLayers;
     [SerializeField] private float minImpactSpeed = 1.5f;     // m/s, anything slower is ignored
     [SerializeField] private float maxImpactSpeed = 15f;      // m/s, full-strength hit
     [Tooltip("Lowest strength for any real barrier hit, so even light hits are felt.")]
     [SerializeField, Range(0f, 1f)] private float minImpactStrength = 0.35f;
     [SerializeField] private float impactFadeTime = 0.45f;    // seconds for the thud to fade out
-    [SerializeField, Range(0f, 1f)] private float scrapeStrength = 0.35f;  // rumble while grinding along a barrier
+
+    [Header("Barrier Scrape")]
+    [Tooltip("Grinding rumble while sliding along a barrier.")]
+    [SerializeField] private bool barrierScrape = true;
+    [SerializeField, Range(0f, 1f)] private float scrapeStrength = 0.35f;
     [SerializeField] private float minScrapeSpeed = 3f;       // m/s
 
+    // ------------------------------------------------------------------ Speed
+
     [Header("Speed Shake")]
+    [Tooltip("Constant buzz that grows with speed.")]
+    [SerializeField] private bool speedShake = true;
     [SerializeField] private float shakeStartKmh = 60f;
     [SerializeField] private float shakeMaxKmh = 200f;
     [Tooltip("Buzz strength just after the start speed. Controller motors are often hard to feel below about 0.1 to 0.15.")]
@@ -22,12 +38,42 @@ public class CarRumble : MonoBehaviour
     [Tooltip("Buzz strength at the max speed.")]
     [SerializeField, Range(0f, 1f)] private float maxSpeedShake = 0.45f;
 
+    // ------------------------------------------------------------------ Damage
+
+    [Header("Damage")]
+    [Tooltip("Pulse each time the car takes damage (for example from bullets). Called by PlayerHealth.")]
+    [SerializeField] private bool damageRumble = true;
+    [Tooltip("A hit of this much damage (or more) gives the full damage strength.")]
+    [SerializeField] private float damageForFullStrength = 25f;
+    [Tooltip("Lowest strength for any hit, so even small hits are felt.")]
+    [SerializeField, Range(0f, 1f)] private float minDamageStrength = 0.3f;
+    [Tooltip("Highest strength a single hit can give.")]
+    [SerializeField, Range(0f, 1f)] private float maxDamageStrength = 0.8f;
+    [Tooltip("Seconds for the pulse to fade out.")]
+    [SerializeField] private float damageFadeTime = 0.3f;
+
+    // ------------------------------------------------------------------ Explosion
+
+    [Header("Explosion")]
+    [Tooltip("Big rumble when the car explodes. Called by PlayerHealth.")]
+    [SerializeField] private bool explosionRumble = true;
+    [SerializeField, Range(0f, 1f)] private float explosionStrength = 1f;
+    [Tooltip("Seconds for the explosion rumble to fade out.")]
+    [SerializeField] private float explosionFadeTime = 1.2f;
+    [Tooltip("Stop the speed shake and scrape once the car has exploded, so only the explosion is felt.")]
+    [SerializeField] private bool silenceOtherRumbleAfterExplosion = true;
+
+    // ------------------------------------------------------------------ Debug
+
     [Header("Debug")]
     [Tooltip("Shows an on-screen readout and logs collisions. Hold D-pad Up to force full rumble as a hardware test. Turn off when done.")]
     [SerializeField] private bool showDebug = true;
 
     private Rigidbody rb;
     private float impact;            // 0-1, decays over time
+    private float damagePulse;       // 0-1, decays over time
+    private float explosion;         // 0-1, decays over time
+    private bool exploded;
     private float lastScrapeTime = -1f;
 
     // Debug readout
@@ -40,9 +86,53 @@ public class CarRumble : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
 
-        if (barrierLayers.value == 0)
+        if (barrierImpacts && barrierLayers.value == 0)
             Debug.LogWarning("CarRumble: Barrier Layers is empty, so barrier hits will not rumble.", this);
     }
+
+    // ---------------------------------------------------------------- Called from PlayerHealth
+
+    /// <summary>A hit that took this much health off. Gives a short pulse.</summary>
+    public void OnDamaged(float amount)
+    {
+        if (!enableRumble || !damageRumble || exploded || amount <= 0f)
+            return;
+
+        float t = damageForFullStrength > 0f ? Mathf.Clamp01(amount / damageForFullStrength) : 1f;
+        float strength = Mathf.Lerp(minDamageStrength, maxDamageStrength, t);
+
+        damagePulse = Mathf.Max(damagePulse, strength);
+
+        if (showDebug)
+            Debug.Log($"CarRumble damage {amount:F1}. Pulse strength: {strength:F2}");
+    }
+
+    /// <summary>The car exploded.</summary>
+    public void OnExploded()
+    {
+        exploded = true;
+
+        if (!enableRumble || !explosionRumble)
+            return;
+
+        explosion = explosionStrength;
+        damagePulse = 0f;   // the explosion takes over from any damage pulse
+
+        if (showDebug)
+            Debug.Log($"CarRumble explosion. Strength: {explosionStrength:F2}");
+    }
+
+    /// <summary>Call when the car is repaired or respawned.</summary>
+    public void ResetState()
+    {
+        exploded = false;
+        explosion = 0f;
+        damagePulse = 0f;
+        impact = 0f;
+        lastScrapeTime = -1f;
+    }
+
+    // ---------------------------------------------------------------- Update
 
     private void Update()
     {
@@ -60,6 +150,13 @@ public class CarRumble : MonoBehaviour
             lastLow = 1f;
             lastHigh = 1f;
             status = "Debug test: D-pad Up held";
+            return;
+        }
+
+        if (!enableRumble)
+        {
+            status = "Silent: Enable Rumble is off";
+            Silence(pad);
             return;
         }
 
@@ -84,32 +181,55 @@ public class CarRumble : MonoBehaviour
 
         status = "Running   (strength " + strength.ToString("F2") + ")";
 
-        // Impact fades out using unscaled time so it behaves the same in slow-mo
-        impact = Mathf.MoveTowards(impact, 0f, Time.unscaledDeltaTime / impactFadeTime);
+        // Pulses fade out using unscaled time so they behave the same in slow-mo
+        float dt = Time.unscaledDeltaTime;
+        impact = Mathf.MoveTowards(impact, 0f, dt / Mathf.Max(0.01f, impactFadeTime));
+        damagePulse = Mathf.MoveTowards(damagePulse, 0f, dt / Mathf.Max(0.01f, damageFadeTime));
+        explosion = Mathf.MoveTowards(explosion, 0f, explosionStrength * dt / Mathf.Max(0.01f, explosionFadeTime));
+
+        bool quietCar = exploded && silenceOtherRumbleAfterExplosion;
 
         // Speed shake: starts at a level you can feel, then climbs toward the redline
         lastSpeedKmh = rb.linearVelocity.magnitude * 3.6f;
-        float speedT = Mathf.InverseLerp(shakeStartKmh, shakeMaxKmh, lastSpeedKmh);
-        float shake = 0f;
-        if (speedT > 0f)
+        float shakeLow = 0f;
+        float shakeHigh = 0f;
+
+        if (speedShake && !quietCar)
         {
-            float curved = Mathf.Pow(speedT, 0.7f);
-            shake = Mathf.Lerp(minSpeedShake, maxSpeedShake, curved);
-            shake *= Mathf.Clamp01(speedT * 8f);   // short ease-in so it doesn't pop on at the start speed
+            float speedT = Mathf.InverseLerp(shakeStartKmh, shakeMaxKmh, lastSpeedKmh);
+            float shake = 0f;
+            if (speedT > 0f)
+            {
+                float curved = Mathf.Pow(speedT, 0.7f);
+                shake = Mathf.Lerp(minSpeedShake, maxSpeedShake, curved);
+                shake *= Mathf.Clamp01(speedT * 8f);   // short ease-in so it doesn't pop on at the start speed
+            }
+
+            float noise = 0.8f + 0.2f * Mathf.PerlinNoise(Time.unscaledTime * 15f, 0f);
+            shakeHigh = shake * noise;
+            shakeLow = shake * 0.5f;
         }
 
-        float noise = 0.8f + 0.2f * Mathf.PerlinNoise(Time.unscaledTime * 15f, 0f);
-        float shakeHigh = shake * noise;
-        float shakeLow = shake * 0.5f;
-
         // Scrape: grinding rumble while in contact with a barrier
-        bool scraping = Time.unscaledTime - lastScrapeTime < 0.1f;
+        bool scraping = barrierScrape && !quietCar && Time.unscaledTime - lastScrapeTime < 0.1f;
         float scrapeHigh = scraping ? scrapeStrength : 0f;
         float scrapeLow = scraping ? scrapeStrength * 0.6f : 0f;
 
+        // Barrier impact (only ever set when Barrier Impacts is on)
+        float impactLow = impact;
+        float impactHigh = impact * 0.8f;
+
+        // Damage pulse: a sharp jolt, so favour the high motor a little
+        float damageLow = damagePulse * 0.7f;
+        float damageHigh = damagePulse;
+
+        // Explosion: heavy on the low motor, with a strong buzz on top
+        float explosionLow = explosion;
+        float explosionHigh = explosion * 0.8f;
+
         // Low motor = heavy thud, high motor = fine buzz
-        float low = Mathf.Clamp01(impact + shakeLow + scrapeLow) * strength;
-        float high = Mathf.Clamp01(impact * 0.8f + shakeHigh + scrapeHigh) * strength;
+        float low = Mathf.Clamp01(impactLow + shakeLow + scrapeLow + damageLow + explosionLow) * strength;
+        float high = Mathf.Clamp01(impactHigh + shakeHigh + scrapeHigh + damageHigh + explosionHigh) * strength;
 
         pad.SetMotorSpeeds(low, high);
         lastLow = low;
@@ -139,6 +259,8 @@ public class CarRumble : MonoBehaviour
         lastHigh = 0f;
     }
 
+    // ---------------------------------------------------------------- Collisions
+
     private void OnCollisionEnter(Collision collision)
     {
         bool isBarrier = IsBarrier(collision);
@@ -155,6 +277,7 @@ public class CarRumble : MonoBehaviour
                       $"at {speed:F1} m/s. Barrier: {isBarrier}. Impact strength: {hitStrength:F2}");
         }
 
+        if (!enableRumble || !barrierImpacts) return;
         if (!isBarrier || hitStrength <= 0f) return;
 
         impact = Mathf.Max(impact, hitStrength);
@@ -162,6 +285,7 @@ public class CarRumble : MonoBehaviour
 
     private void OnCollisionStay(Collision collision)
     {
+        if (!enableRumble || !barrierScrape) return;
         if (!IsBarrier(collision)) return;
 
         if (rb.linearVelocity.magnitude > minScrapeSpeed)
@@ -173,6 +297,8 @@ public class CarRumble : MonoBehaviour
         return (barrierLayers.value & (1 << collision.gameObject.layer)) != 0;
     }
 
+    // ---------------------------------------------------------------- Debug and cleanup
+
     private void OnGUI()
     {
         if (!showDebug) return;
@@ -180,17 +306,19 @@ public class CarRumble : MonoBehaviour
         Gamepad pad = Gamepad.current;
         string padName = pad != null ? pad.displayName : "NONE";
 
-        GUI.Label(new Rect(10, 10, 600, 140),
+        GUI.Label(new Rect(10, 10, 600, 160),
             "Rumble debug\n" +
             $"Gamepad: {padName}\n" +
             $"Status: {status}\n" +
-            $"Speed: {lastSpeedKmh:F0} km/h   Impact: {impact:F2}\n" +
+            $"Speed: {lastSpeedKmh:F0} km/h   Impact: {impact:F2}   Damage: {damagePulse:F2}   Explosion: {explosion:F2}\n" +
             $"Motors: low {lastLow:F2}   high {lastHigh:F2}");
     }
 
     public void StopRumble()
     {
         impact = 0f;
+        damagePulse = 0f;
+        explosion = 0f;
         lastScrapeTime = -1f;
         if (Gamepad.current != null)
             Gamepad.current.SetMotorSpeeds(0f, 0f);

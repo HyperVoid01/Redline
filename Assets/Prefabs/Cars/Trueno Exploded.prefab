@@ -2025,6 +2025,15 @@ MonoBehaviour:
   centerOfMass: {x: 0, y: -0.2, z: 0}
   updatesHud: 1
   playerControlled: 1
+  useSteerCurve: 1
+  steerCurvePower: 1.2
+  rearGripMultiplier: 1.3
+  tractionControl: 1
+  tractionStartSlip: 0.4
+  tractionFullSlip: 0.9
+  tractionMinTorque: 0.25
+  disableInputWhenDead: 1
+  health: {fileID: 0}
 --- !u!114 &8144703403040921314
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2104,6 +2113,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHealth: 100
   partDetacher: {fileID: 0}
+  rumble: {fileID: 0}
   onHealthChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -2114,6 +2124,10 @@ MonoBehaviour:
   damagedParticles: {fileID: 3403093011531166513}
   damagedThreshold: 0.4
   deathShake: 1
+  matchDeathParticles: 1
+  extraHold: 0.5
+  manualDelay: 2
+  maxDelay: 6
 --- !u!114 &526620731408265386
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2430,6 +2444,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57091e3a65d165d4987683e83c827db7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  enableRumble: 1
+  barrierImpacts: 1
   barrierLayers:
     serializedVersion: 2
     m_Bits: 256
@@ -2437,12 +2453,23 @@ MonoBehaviour:
   maxImpactSpeed: 25
   minImpactStrength: 0.4
   impactFadeTime: 0.35
+  barrierScrape: 1
   scrapeStrength: 0.25
   minScrapeSpeed: 3
+  speedShake: 1
   shakeStartKmh: 90
   shakeMaxKmh: 200
   minSpeedShake: 0.15
   maxSpeedShake: 1
+  damageRumble: 1
+  damageForFullStrength: 25
+  minDamageStrength: 0.3
+  maxDamageStrength: 0.8
+  damageFadeTime: 0.3
+  explosionRumble: 1
+  explosionStrength: 1
+  explosionFadeTime: 1.2
+  silenceOtherRumbleAfterExplosion: 1
   showDebug: 0
 --- !u!1 &936006410455833799
 GameObject:

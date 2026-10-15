@@ -11,7 +11,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] private bool freezeOnWin = true;
 
     [Header("Game over")]
-    [Tooltip("Seconds between losing and the game over panel appearing and the game freezing. The game keeps running during this time, so the crash can play out. 0 = straight away.")]
+    [Tooltip("Default seconds between losing and the game over panel appearing and the game freezing. " +
+             "Used for losses that don't pass their own delay (for example falling off the track). " +
+             "The car's PlayerHealth passes its own delay for the explosion, timed to the death particles. 0 = straight away.")]
     [SerializeField] private float gameOverDelay = 2f;
 
     [Header("Pause")]
@@ -251,8 +253,17 @@ public class GameManager : MonoBehaviour
 
     // ---------- End of run ----------
 
-    // Game Over
+    /// <summary>Game over using the default delay. Kept without parameters so it can still be hooked to a UnityEvent.</summary>
     public void EndGame()
+    {
+        EndGame(-1f);
+    }
+
+    /// <summary>
+    /// Game over. delayOverride is the real-time seconds to wait before the panel shows and the game freezes
+    /// (PlayerHealth passes one timed to the death particles). A negative value uses the default Game Over Delay.
+    /// </summary>
+    public void EndGame(float delayOverride)
     {
         if (IsGameOver)
             return;
@@ -267,19 +278,21 @@ public class GameManager : MonoBehaviour
             ScoreManager.Instance.FinishRun(false);
         }
 
-        if (gameOverDelay <= 0f)
+        float delay = delayOverride >= 0f ? delayOverride : gameOverDelay;
+
+        if (delay <= 0f)
         {
             ShowGameOverAndFreeze();
             return;
         }
 
-        gameOverRoutine = StartCoroutine(GameOverAfterDelay());
+        gameOverRoutine = StartCoroutine(GameOverAfterDelay(delay));
     }
 
-    private IEnumerator GameOverAfterDelay()
+    private IEnumerator GameOverAfterDelay(float delay)
     {
         // Game time is still running here, so the crash and falling parts play out.
-        yield return new WaitForSecondsRealtime(gameOverDelay);
+        yield return new WaitForSecondsRealtime(delay);
 
         gameOverRoutine = null;
         ShowGameOverAndFreeze();

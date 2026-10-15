@@ -41,6 +41,7 @@ public class SettingsManager : MonoBehaviour
     [SerializeField] private Toggle invertLookYToggle;
     [SerializeField] private Slider steeringResponseSlider;
     [SerializeField] private Slider steeringAssistSlider;
+    [SerializeField] private Toggle tractionControlToggle;
     [SerializeField] private Slider rumbleStrengthSlider;
 
     [Header("Interface")]
@@ -137,6 +138,7 @@ public class SettingsManager : MonoBehaviour
     public void SetInvertLookY(bool value) { data.invertLookY = value; MarkChanged(); }
     public void SetSteeringResponse(float value) { data.steeringResponse = Mathf.Clamp(value, 0.5f, 2f); MarkChanged(); }
     public void SetSteeringAssist(float value) { data.steeringAssist = Mathf.Clamp(value, 0f, 2f); MarkChanged(); }
+    public void SetTractionControl(bool value) { data.tractionControl = value; MarkChanged(); }
     public void SetRumbleStrength(float value) { data.rumbleStrength = Mathf.Clamp01(value); MarkChanged(); }
 
     public void SetSpeedUnit(int index)
@@ -238,6 +240,7 @@ public class SettingsManager : MonoBehaviour
         data.invertLookY = PlayerPrefs.GetInt(Key("invertLookY"), data.invertLookY ? 1 : 0) == 1;
         data.steeringResponse = Mathf.Clamp(PlayerPrefs.GetFloat(Key("steeringResponse"), data.steeringResponse), 0.5f, 2f);
         data.steeringAssist = Mathf.Clamp(PlayerPrefs.GetFloat(Key("steeringAssist"), data.steeringAssist), 0f, 2f);
+        data.tractionControl = PlayerPrefs.GetInt(Key("tractionControl"), data.tractionControl ? 1 : 0) == 1;
         data.rumbleStrength = Mathf.Clamp01(PlayerPrefs.GetFloat(Key("rumbleStrength"), data.rumbleStrength));
 
         data.speedUnit = (SpeedUnit)PlayerPrefs.GetInt(Key("speedUnit"), (int)data.speedUnit);
@@ -262,6 +265,7 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.SetInt(Key("invertLookY"), data.invertLookY ? 1 : 0);
         PlayerPrefs.SetFloat(Key("steeringResponse"), data.steeringResponse);
         PlayerPrefs.SetFloat(Key("steeringAssist"), data.steeringAssist);
+        PlayerPrefs.SetInt(Key("tractionControl"), data.tractionControl ? 1 : 0);
         PlayerPrefs.SetFloat(Key("rumbleStrength"), data.rumbleStrength);
 
         PlayerPrefs.SetInt(Key("speedUnit"), (int)data.speedUnit);
@@ -314,6 +318,7 @@ public class SettingsManager : MonoBehaviour
         BindSlider(rumbleStrengthSlider, 0f, 1f, SetRumbleStrength);
 
         if (invertLookYToggle != null) invertLookYToggle.onValueChanged.AddListener(SetInvertLookY);
+        if (tractionControlToggle != null) tractionControlToggle.onValueChanged.AddListener(SetTractionControl);
         if (fullscreenToggle != null) fullscreenToggle.onValueChanged.AddListener(SetFullscreen);
         if (vsyncToggle != null) vsyncToggle.onValueChanged.AddListener(SetVsync);
 
@@ -384,6 +389,7 @@ public class SettingsManager : MonoBehaviour
         SetSlider(rumbleStrengthSlider, data.rumbleStrength);
 
         if (invertLookYToggle != null) invertLookYToggle.SetIsOnWithoutNotify(data.invertLookY);
+        if (tractionControlToggle != null) tractionControlToggle.SetIsOnWithoutNotify(data.tractionControl);
         if (fullscreenToggle != null) fullscreenToggle.SetIsOnWithoutNotify(data.fullscreen);
         if (vsyncToggle != null) vsyncToggle.SetIsOnWithoutNotify(data.vsync);
 

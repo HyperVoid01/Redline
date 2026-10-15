@@ -12,6 +12,9 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("Makes car parts fall off as health drops. Found automatically on this car if left empty.")]
     public CarPartDetacher partDetacher;
 
+    [Tooltip("Makes the controller vibrate on damage and on the explosion. Found automatically on this car if left empty.")]
+    public CarRumble rumble;
+
     [Tooltip("Current health, max health. Hook a health bar up to this.")]
     public UnityEvent<float, float> onHealthChanged;
     public UnityEvent onDied;
@@ -27,6 +30,17 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("Camera shake strength on death, 0 to 1. Applies to the chase camera and the interior camera.")]
     [Range(0f, 1f)] public float deathShake = 1f;
 
+    [Header("Game Over Timing")]
+    [Tooltip("ON: the game over screen waits until the death particles have finished (found from the particle systems themselves). " +
+             "OFF: it waits the Manual Delay below.")]
+    public bool matchDeathParticles = true;
+    [Tooltip("Extra seconds added after the particles finish, so the player gets a moment with the wreck.")]
+    public float extraHold = 0.5f;
+    [Tooltip("Used when Match Death Particles is off, or when there are no death particles assigned. Seconds, in real time.")]
+    public float manualDelay = 2f;
+    [Tooltip("The longest the game over screen is ever held back, in case a particle system is very long or looping.")]
+    public float maxDelay = 6f;
+
     public float Current { get; private set; }
     public bool IsDead { get; private set; }
     public float Normalized { get { return maxHealth > 0f ? Current / maxHealth : 0f; } }
@@ -35,6 +49,11 @@ public class PlayerHealth : MonoBehaviour
     {
         if (partDetacher == null)
             partDetacher = GetComponentInChildren<CarPartDetacher>();
+
+        if (rumble == null)
+            rumble = GetComponentInParent<CarRumble>();
+        if (rumble == null)
+            rumble = GetComponentInChildren<CarRumble>();
 
         ResetHealth();
     }
@@ -48,6 +67,9 @@ public class PlayerHealth : MonoBehaviour
         // Put every fallen part back on the car.
         if (partDetacher != null)
             partDetacher.RestoreParts();
+
+        if (rumble != null)
+            rumble.ResetState();
 
         // Healthy again: clear the smoke straight away.
         if (damagedParticles != null)
@@ -70,6 +92,10 @@ public class PlayerHealth : MonoBehaviour
             partDetacher.UpdateFromHealth(Current, maxHealth);
 
         UpdateDamagedParticles();
+
+        // A killing blow goes straight to the explosion rumble in Die().
+        if (Current > 0f && rumble != null)
+            rumble.OnDamaged(amount);
 
         if (Current <= 0f)
             Die();
@@ -113,6 +139,35 @@ public class PlayerHealth : MonoBehaviour
             interior.AddShake(deathShake);
     }
 
+    // How long to wait, in real seconds, before the game over screen appears.
+    float GetGameOverDelay()
+    {
+        if (!matchDeathParticles || deathParticles == null)
+            return Mathf.Min(manualDelay, maxDelay);
+
+        // Longest any of the death particle systems (including children) takes to fully finish.
+        float longest = 0f;
+        ParticleSystem[] systems = deathParticles.GetComponentsInChildren<ParticleSystem>(true);
+
+        for (int i = 0; i < systems.Length; i++)
+        {
+            ParticleSystem.MainModule main = systems[i].main;
+
+            // A looping system never finishes, so it can't be matched. Fall back to the manual delay for it.
+            if (main.loop)
+            {
+                longest = Mathf.Max(longest, manualDelay);
+                continue;
+            }
+
+            float speed = Mathf.Max(0.01f, main.simulationSpeed);
+            float total = main.startDelay.constantMax + main.duration + main.startLifetime.constantMax;
+            longest = Mathf.Max(longest, total / speed);
+        }
+
+        return Mathf.Min(longest + extraHold, maxDelay);
+    }
+
     void Die()
     {
         if (SoundPlayer.Instance != null)
@@ -127,10 +182,13 @@ public class PlayerHealth : MonoBehaviour
         if (deathParticles != null)
             deathParticles.Play();
 
+        if (rumble != null)
+            rumble.OnExploded();
+
         ShakeCameras();
 
         // If your EndGame takes parameters, or the singleton accessor is named differently, change this one line.
         if (GameManager.Instance != null && !GameManager.Instance.IsGameOver)
-            GameManager.Instance.EndGame();
+            GameManager.Instance.EndGame(GetGameOverDelay());
     }
 }

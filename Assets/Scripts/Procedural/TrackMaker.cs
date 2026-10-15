@@ -32,8 +32,9 @@ public class TrackMaker : MonoBehaviour
 
     private const string GatesRootName = "Gates";
     private const string BarriersRootName = "BarrierPieces";
-    private const string LegacyBarriersName = "Barriers"; // from the old procedural barrier mesh
-    private const string FinishRootName = "FinishPlatform";
+    private const string LegacyBarriersName = "Barriers";       // from the old procedural barrier mesh
+    private const string LegacyPlatformName = "FinishPlatform";  // from the old square finish platform
+    private const string FinishRootName = "Finish";
 
     private SplineContainer container;
     private MeshFilter meshFilter;
@@ -41,13 +42,25 @@ public class TrackMaker : MonoBehaviour
     private MeshCollider meshCollider;
     private Mesh roadMesh;
     private TrackSampler sampler;
-    
+
+    // Index of the spline knot where the finish line is. The runout continues after it.
+    private int finishKnotIndex;
+
     public TerrainStripGenerator terrain;
     public VegetationScatterer scatterer;
 
     public bool IsGenerated { get; private set; }
     public int CurrentSeed { get; private set; }
+
+    /// <summary>Full length of the spline, including the runout past the finish line.</summary>
     public float TrackLength { get; private set; }
+
+    /// <summary>Normalised position (0 to 1) of the finish line. The road carries on past it.</summary>
+    public float FinishT { get; private set; } = 1f;
+
+    /// <summary>Approximate distance along the track to the finish line, in metres.</summary>
+    public float FinishDistance => FinishT * TrackLength;
+
     public SplineContainer Container => container;
 
     /// <summary>World position of the start of the track.</summary>
@@ -62,8 +75,14 @@ public class TrackMaker : MonoBehaviour
         get { SampleAtT(0f, out _, out Vector3 f); return Quaternion.LookRotation(f, Vector3.up); }
     }
 
-    /// <summary>World position of the end of the track.</summary>
+    /// <summary>World position of the finish line.</summary>
     public Vector3 FinishPosition
+    {
+        get { SampleAtT(FinishT, out Vector3 p, out _); return p; }
+    }
+
+    /// <summary>World position of the very end of the road, after the runout.</summary>
+    public Vector3 EndPosition
     {
         get { SampleAtT(1f, out Vector3 p, out _); return p; }
     }
@@ -113,7 +132,7 @@ public class TrackMaker : MonoBehaviour
         }
 
         EnsureComponents();
-        RemoveLegacyBarriers();
+        RemoveLegacyObjects();
 
         CurrentSeed = useRandomSeed ? System.Environment.TickCount : seed;
         System.Random rng = new System.Random(CurrentSeed);
@@ -123,13 +142,17 @@ public class TrackMaker : MonoBehaviour
         BuildSpline(points);
         TrackLength = container.Spline.GetLength();
 
+        // Where the finish line sits on the spline. Uses the same 0 to 1 scale as SampleAtT.
+        FinishT = Mathf.Clamp01(SplineUtility.GetNormalizedInterpolation(
+            container.Spline, finishKnotIndex, PathIndexUnit.Knot));
+
         BuildRoadMesh();
         SpawnBarriers();
         SpawnGates();
-        SpawnFinishPlatform();
+        SpawnFinish();
 
         IsGenerated = true;
-        Debug.Log($"{name}: generated {TrackLength:0} m track with seed {CurrentSeed}.", this);
+        Debug.Log($"{name}: generated {TrackLength:0} m track (finish at {FinishDistance:0} m) with seed {CurrentSeed}.", this);
     }
 
     private void EnsureComponents()
@@ -211,29 +234,24 @@ public class TrackMaker : MonoBehaviour
     }
 
     /// <summary>
-    /// Adds the finish straight and checks it like any other section. The finish platform sticks out
-    /// past the end of the road, so that stretch is checked too. If it doesn't fit, the last section
-    /// is removed and the finish is tried again from the one before.
+    /// Adds the finish straight and the runout after it, and checks them like any other section.
+    /// If they don't fit, the last section is removed and the finish is tried again from the one before.
+    /// The finish line sits at the end of the finish straight. The runout carries on past it.
     /// </summary>
     private void AppendFinish(List<Vector3> points, List<SectionMark> marks, ref float yaw, ref float generated,
                               float step, int skip, float clearance)
     {
-        int finishKnots = Mathf.CeilToInt(trackData.finishStraightLength / step);
-        int platformKnots = trackData.generateFinishPlatform
-            ? Mathf.CeilToInt(trackData.finishPlatformLength / step)
-            : 0;
+        int finishKnots = Mathf.Max(1, Mathf.CeilToInt(trackData.finishStraightLength / step));
+        int runoutKnots = Mathf.CeilToInt(trackData.runoutLength / step);
 
         int removedSections = 0;
 
         while (true)
         {
             int start = points.Count;
-            AppendArc(points, yaw, 0f, finishKnots + platformKnots, step);
+            AppendArc(points, yaw, 0f, finishKnots + runoutKnots, step);
 
             bool clear = IsClear(points, start, skip, clearance);
-
-            // The platform part was only there for the check; it is built separately later.
-            points.RemoveRange(points.Count - platformKnots, platformKnots);
 
             if (clear || marks.Count == 0)
             {
@@ -245,6 +263,9 @@ public class TrackMaker : MonoBehaviour
                 {
                     Debug.Log($"{name}: removed {removedSections} section(s) at the end so the finish doesn't overlap the road.", this);
                 }
+
+                // The finish line is the last knot of the finish straight. Everything after it is runout.
+                finishKnotIndex = points.Count - 1 - runoutKnots;
                 return;
             }
 
@@ -500,7 +521,8 @@ public class TrackMaker : MonoBehaviour
         // Bake the collider once per generation, never per frame.
         meshCollider.sharedMesh = null;
         meshCollider.sharedMesh = roadMesh;
-        
+
+        // Land and vegetation follow the whole spline, so they carry on through the runout too.
         terrain.Generate();
         sampler.Build();
         scatterer.Scatter();
@@ -567,13 +589,20 @@ public class TrackMaker : MonoBehaviour
         return position + right * (side * sideDistance);
     }
 
-    private void RemoveLegacyBarriers()
+    private void RemoveLegacyObjects()
     {
         // The old procedural barrier object, if it is still in the scene from the previous version.
         Transform legacy = transform.Find(LegacyBarriersName);
         if (legacy != null)
         {
             DestroySafe(legacy.gameObject);
+        }
+
+        // The old square finish platform and its FinishZone, if still in the scene.
+        Transform platform = transform.Find(LegacyPlatformName);
+        if (platform != null)
+        {
+            DestroySafe(platform.gameObject);
         }
     }
 
@@ -590,65 +619,37 @@ public class TrackMaker : MonoBehaviour
 
         Transform root = GetOrCreateRoot(GatesRootName);
 
-        for (float d = trackData.firstGateDistance; d < TrackLength - 10f; d += trackData.gateSpacing)
+        // Gates stop before the finish line, none in the runout.
+        float lastGate = FinishDistance - 10f;
+
+        for (float d = trackData.firstGateDistance; d < lastGate; d += trackData.gateSpacing)
         {
             SampleAtT(d / TrackLength, out Vector3 position, out Vector3 forward);
             Instantiate(trackData.gatePrefab, position, Quaternion.LookRotation(forward, Vector3.up), root);
         }
     }
-    
-    // ---------------------------------------------------------------- Finish platform
 
-    private void SpawnFinishPlatform()
+    // ---------------------------------------------------------------- Finish
+
+    private void SpawnFinish()
     {
         ClearChildren(transform.Find(FinishRootName));
 
-        if (!trackData.generateFinishPlatform)
+        if (trackData.finishPrefab == null)
         {
             return;
         }
 
         Transform root = GetOrCreateRoot(FinishRootName);
 
-        SampleAtT(1f, out Vector3 end, out Vector3 forward);
-        Quaternion rotation = Quaternion.LookRotation(forward, Vector3.up);
+        // On the road at the finish line, facing down the track.
+        SampleAtT(FinishT, out Vector3 position, out Vector3 forward);
+        GameObject finish = Instantiate(trackData.finishPrefab, position, Quaternion.LookRotation(forward, Vector3.up), root);
 
-        float length = trackData.finishPlatformLength;
-        float width = trackData.roadWidth + trackData.finishPlatformSideMargin * 2f;
-        float thickness = trackData.finishPlatformThickness;
-
-        // Top surface sits flush with the end of the road, extending straight on from it.
-        Vector3 topCentre = end + forward * (length * 0.5f);
-        Vector3 slabCentre = topCentre + Vector3.down * (thickness * 0.5f);
-
-        GameObject slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        slab.name = "Platform";
-        slab.transform.SetParent(root, true);
-        slab.transform.SetPositionAndRotation(slabCentre, rotation);
-        slab.transform.localScale = new Vector3(width, thickness, length);
-
-        Material material = trackData.finishPlatformMaterial != null
-            ? trackData.finishPlatformMaterial
-            : trackData.roadMaterial;
-        if (material != null)
+        if (finish.GetComponentInChildren<FinishTrigger>(true) == null)
         {
-            slab.GetComponent<Renderer>().sharedMaterial = material;
-        }
-
-        // Trigger volume covering the platform surface.
-        const float zoneHeight = 6f;
-        GameObject zone = new GameObject("FinishZone");
-        zone.transform.SetParent(root, true);
-        zone.transform.SetPositionAndRotation(topCentre + Vector3.up * (zoneHeight * 0.5f), rotation);
-
-        BoxCollider box = zone.AddComponent<BoxCollider>();
-        box.isTrigger = true;
-        box.size = new Vector3(width, zoneHeight, length);
-        zone.AddComponent<FinishTrigger>();
-
-        if (trackData.finishDecorPrefab != null)
-        {
-            Instantiate(trackData.finishDecorPrefab, topCentre, rotation, root);
+            Debug.LogWarning($"{name}: the finish prefab has no FinishTrigger, so crossing the line won't win the game. " +
+                             "Add a trigger collider and a FinishTrigger to the prefab.", this);
         }
     }
 
@@ -683,8 +684,8 @@ public class TrackMaker : MonoBehaviour
     // ---------------------------------------------------------------- Path API (for enemies)
 
     /// <summary>
-    /// World position and forward direction at normalised position t (0 = start, 1 = end).
-    /// Position includes height. Forward is kept horizontal.
+    /// World position and forward direction at normalised position t (0 = start, 1 = end of the runout).
+    /// Use FinishT for the finish line. Position includes height. Forward is kept horizontal.
     /// </summary>
     public void SampleAtT(float t, out Vector3 position, out Vector3 forward)
     {

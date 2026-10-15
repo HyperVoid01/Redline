@@ -28,6 +28,8 @@ public class SettingsData : ScriptableObject
     [Range(0.5f, 2f)] public float steeringResponse = 1f;
     [Tooltip("Strength of the automatic counter-steer in drifts. Multiplies CarData.counterSteerAssist. 0 = off.")]
     [Range(0f, 2f)] public float steeringAssist = 1f;
+    [Tooltip("Cuts drive torque while the tyres slip, so the car is harder to spin out. Only applies to the player's car.")]
+    public bool tractionControl = true;
     [Tooltip("Controller vibration strength. Multiplies all rumble. 0 = off, 1 = full.")]
     [Range(0f, 1f)] public float rumbleStrength = 1f;
 
@@ -58,6 +60,7 @@ public class SettingsData : ScriptableObject
         invertLookY = false;
         steeringResponse = 1f;
         steeringAssist = 1f;
+        tractionControl = true;
         rumbleStrength = 1f;
 
         speedUnit = SpeedUnit.Kmh;
