@@ -37,6 +37,21 @@ public class CarController : MonoBehaviour
     [Tooltip("Fraction of the torque kept at full slip. 0 = cut it completely, 1 = no cut.")]
     [SerializeField, Range(0f, 1f)] private float tractionMinTorque = 0.25f;
 
+    [Header("Taillights")]
+    [Tooltip("Renderers that use the emissive taillight material. Leave empty to disable the emissive effect.")]
+    [SerializeField] private Renderer[] taillightRenderers;
+    [Tooltip("Which material slot on those renderers is the taillight material (0 = first slot).")]
+    [SerializeField] private int taillightMaterialIndex = 0;
+    [Tooltip("The emission already set on the taillight material is used as the idle (not braking) look. " +
+             "This colour is only used as a fallback if that material's emission is black.")]
+    [SerializeField, ColorUsage(false, true)] private Color taillightFallbackColor = Color.red;
+    [Tooltip("While braking, the material's own emission is multiplied by this. 1 = no change, 4 = four times brighter. " +
+             "Pair with Bloom in the post-processing volume for a visible glow.")]
+    [SerializeField, Min(1f)] private float taillightBrakeMultiplier = 4f;
+    [Tooltip("Optional real lights (small red point lights behind the car). They are only enabled while braking. " +
+             "Best on the player's car only, to keep the light count low.")]
+    [SerializeField] private Light[] brakeLights;
+
     [Header("Death")]
     [Tooltip("Ignore the player's driving input once the car's health reaches 0, so the wreck can't be driven during the explosion.")]
     [SerializeField] private bool disableInputWhenDead = true;
@@ -52,6 +67,7 @@ public class CarController : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float finishBrakeFraction = 0.5f;
 
     private const float MsToKmh = 3.6f;
+    private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
     private float horizontalInput, verticalInput;
     private bool handbrake;
@@ -61,6 +77,12 @@ public class CarController : MonoBehaviour
     private WheelFrictionCurve baseRearSideways;
     private float rearGripLoss; // 0 = full grip, 1 = fully sliding
     private float smoothedSteer;
+
+    // Taillight state
+    private Material[] taillightMaterials;
+    private Color[] taillightIdleColors;
+    private bool taillightsBraking;
+    private bool taillightsInitialised;
 
     /// <summary>Signed speed along the car's forward axis in km/h (negative when reversing).</summary>
     public float ForwardSpeedKmh { get; private set; }
@@ -75,9 +97,12 @@ public class CarController : MonoBehaviour
 
     /// <summary>Angle in degrees between where the car points and where it is travelling.</summary>
     public float DriftAngle { get; private set; }
-    
+
     /// <summary>Steering angle actually applied to the front wheels, in degrees (positive = right).</summary>
     public float SteerAngle { get; private set; }
+
+    /// <summary>True while any brake (pedal, handbrake or finish auto brake) is being applied.</summary>
+    public bool IsBraking { get; private set; }
 
     /// <summary>Applied steering as a fraction of full lock, from -1 to 1.</summary>
     public float SteerNormalized =>
@@ -146,6 +171,21 @@ public class CarController : MonoBehaviour
 
         // Remember the rear wheels' normal grip so the drift can blend away from it and back.
         baseRearSideways = wheel3.sidewaysFriction;
+
+        SetupTaillights();
+    }
+
+    private void OnDestroy()
+    {
+        // The taillight materials are instances created in SetupTaillights, so clean them up.
+        if (taillightMaterials == null)
+            return;
+
+        for (int i = 0; i < taillightMaterials.Length; i++)
+        {
+            if (taillightMaterials[i] != null)
+                Destroy(taillightMaterials[i]);
+        }
     }
 
     private void Update()
@@ -228,6 +268,10 @@ public class CarController : MonoBehaviour
             rearBrake = Mathf.Max(rearBrake, finishBrake);
         }
 
+        // Brake lights follow whatever brake torque is actually being applied.
+        IsBraking = frontBrake > 0.01f || rearBrake > 0.01f;
+        UpdateTaillights(IsBraking);
+
         UpdateRearGrip(dt);
         ApplyDrive(frontMotor, rearMotor, frontBrake, rearBrake);
         ApplySteering(CalculateSteer(dt));
@@ -248,6 +292,77 @@ public class CarController : MonoBehaviour
         {
             lastDisplayedSpeed = speed;
             UIManager.Instance.UpdateSpeed(speed);
+        }
+    }
+
+    // ---------------------------------------------------------------- Taillights
+
+    // Creates one material instance per renderer (once, at startup) so each car's lights
+    // change independently and the shared material asset is never modified.
+    private void SetupTaillights()
+    {
+        if (taillightRenderers != null && taillightRenderers.Length > 0)
+        {
+            taillightMaterials = new Material[taillightRenderers.Length];
+            taillightIdleColors = new Color[taillightRenderers.Length];
+
+            for (int i = 0; i < taillightRenderers.Length; i++)
+            {
+                Renderer r = taillightRenderers[i];
+                if (r == null)
+                    continue;
+
+                Material[] mats = r.materials; // instances
+                int index = Mathf.Clamp(taillightMaterialIndex, 0, mats.Length - 1);
+                Material mat = mats[index];
+
+                // Emission only shows if the keyword is on.
+                mat.EnableKeyword("_EMISSION");
+                mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+
+                r.materials = mats;
+                taillightMaterials[i] = r.materials[index];
+
+                // Read the material's current emission and keep it as the idle look.
+                Color idle = taillightMaterials[i].GetColor(EmissionColorId);
+                if (idle.maxColorComponent <= 0.001f)
+                    idle = taillightFallbackColor;
+
+                taillightIdleColors[i] = idle;
+            }
+        }
+
+        taillightsInitialised = false;
+        UpdateTaillights(false);
+    }
+
+    private void UpdateTaillights(bool braking)
+    {
+        // Only do work when the state actually changes.
+        if (taillightsInitialised && braking == taillightsBraking)
+            return;
+
+        taillightsInitialised = true;
+        taillightsBraking = braking;
+
+        if (taillightMaterials != null)
+        {
+            float scale = braking ? taillightBrakeMultiplier : 1f;
+
+            for (int i = 0; i < taillightMaterials.Length; i++)
+            {
+                if (taillightMaterials[i] != null)
+                    taillightMaterials[i].SetColor(EmissionColorId, taillightIdleColors[i] * scale);
+            }
+        }
+
+        if (brakeLights != null)
+        {
+            for (int i = 0; i < brakeLights.Length; i++)
+            {
+                if (brakeLights[i] != null)
+                    brakeLights[i].enabled = braking;
+            }
         }
     }
 

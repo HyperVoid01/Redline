@@ -2032,8 +2032,18 @@ MonoBehaviour:
   tractionStartSlip: 0.4
   tractionFullSlip: 0.9
   tractionMinTorque: 0.25
+  taillightRenderers:
+  - {fileID: 1221571570481665675}
+  - {fileID: 1762150684225094271}
+  taillightMaterialIndex: 0
+  taillightFallbackColor: {r: 1, g: 0, b: 0, a: 1}
+  taillightBrakeMultiplier: 2
+  brakeLights: []
   disableInputWhenDead: 1
-  health: {fileID: 0}
+  health: {fileID: 7088663395570308766}
+  disableInputOnFinish: 1
+  autoBrakeOnFinish: 1
+  finishBrakeFraction: 0.5
 --- !u!114 &8144703403040921314
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2128,6 +2138,7 @@ MonoBehaviour:
   extraHold: 0.5
   manualDelay: 2
   maxDelay: 6
+  invulnerableAfterFinish: 1
 --- !u!114 &526620731408265386
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2470,6 +2481,10 @@ MonoBehaviour:
   explosionStrength: 1
   explosionFadeTime: 1.2
   silenceOtherRumbleAfterExplosion: 1
+  finishRumble: 1
+  finishStrength: 0.9
+  finishFadeTime: 1
+  silenceOtherRumbleAfterFinish: 1
   showDebug: 0
 --- !u!1 &936006410455833799
 GameObject:
@@ -10076,6 +10091,7 @@ Transform:
   - {fileID: 8447197345895559632}
   - {fileID: 1920859848213050146}
   - {fileID: 2978044292885724068}
+  - {fileID: 1999097489583861889}
   - {fileID: 5539651185185576232}
   - {fileID: 8775789757872018318}
   - {fileID: 4497076820968528152}
@@ -10096,7 +10112,6 @@ Transform:
   - {fileID: 2562975725317257104}
   - {fileID: 4200853956412720239}
   - {fileID: 1536802511951399372}
-  - {fileID: 1999097489583861889}
   - {fileID: 7203752098320495859}
   - {fileID: 3748995151660070982}
   - {fileID: 1634822069453814579}
@@ -11063,7 +11078,7 @@ GameObject:
   - component: {fileID: 3684957722600629764}
   - component: {fileID: 1221571570481665675}
   m_Layer: 0
-  m_Name: CarBody.045
+  m_Name: LeftTailLight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -15054,7 +15069,7 @@ GameObject:
   - component: {fileID: 3968840378009999100}
   - component: {fileID: 1762150684225094271}
   m_Layer: 0
-  m_Name: CarBody.066
+  m_Name: RightTailLight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -15069,7 +15084,7 @@ Transform:
   m_GameObject: {fileID: 7862851211007236717}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000081460335, y: 0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
