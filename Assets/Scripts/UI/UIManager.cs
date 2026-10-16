@@ -67,6 +67,8 @@ public class UIManager : MonoBehaviour
     private string lastSpeedString;
     private int lastSpeed = -1;
     private int lastSpeedKmh = -1;
+    private bool lastSpeedMph;
+    private bool carPushesSpeed;   // the player's CarController already calls UpdateSpeed, so Update needn't read the body too
 
     // HUD visibility is worked out from these, so no single call can override the others.
     private bool hudWanted = true;     // what the current camera wants (CameraSwitcher)
@@ -100,7 +102,7 @@ public class UIManager : MonoBehaviour
     private void OnSettingsChanged()
     {
         if (lastSpeedKmh >= 0)
-            UpdateSpeed(lastSpeedKmh);
+            ShowSpeed(lastSpeedKmh, true);
     }
 
     /// <summary>
@@ -110,6 +112,8 @@ public class UIManager : MonoBehaviour
     public void SetPlayerCar(Transform car)
     {
         playerBody = car != null ? car.GetComponentInChildren<Rigidbody>() : null;
+        CarController controller = car != null ? car.GetComponentInChildren<CarController>() : null;
+        carPushesSpeed = controller != null && controller.UpdatesHud;
         lastSpeed = -1;   // force the text to refresh on the next frame
     }
 
@@ -153,7 +157,7 @@ public class UIManager : MonoBehaviour
     {
         KeepControllerSelection();
 
-        if (!readSpeedFromCar || playerBody == null)
+        if (!readSpeedFromCar || playerBody == null || carPushesSpeed)
             return;
 
         // m/s to km/h
@@ -170,10 +174,20 @@ public class UIManager : MonoBehaviour
     /// <summary>Takes the speed in km/h and shows it in the unit chosen in the settings.</summary>
     public void UpdateSpeed(int speedKmh)
     {
-        lastSpeedKmh = speedKmh;
+        ShowSpeed(speedKmh, false);
+    }
 
+    private void ShowSpeed(int speedKmh, bool force)
+    {
         SettingsData settings = SettingsManager.Current;
         bool mph = settings != null && settings.speedUnit == SpeedUnit.Mph;
+
+        // Nothing to redraw if neither the number nor the unit changed.
+        if (!force && speedKmh == lastSpeedKmh && mph == lastSpeedMph)
+            return;
+
+        lastSpeedKmh = speedKmh;
+        lastSpeedMph = mph;
 
         lastSpeedString = mph
             ? Mathf.RoundToInt(speedKmh * KmhToMph) + " mph"

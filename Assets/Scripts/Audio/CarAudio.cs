@@ -206,7 +206,12 @@ public class CarAudio : MonoBehaviour
 
         foreach (WheelCollider wheel in wheels)
         {
-            if (!wheel.GetGroundHit(out WheelHit hit))
+            WheelHit hit;
+            bool grounded = car != null
+                ? car.TryGetWheelHit(wheel, out hit)
+                : wheel.GetGroundHit(out hit);
+
+            if (!grounded)
                 continue;
 
             float slip = Mathf.Max(

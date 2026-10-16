@@ -18,7 +18,6 @@ public class EnemyBullet : MonoBehaviour
     public float whizDistance = 3f;
 
     bool whizzed;
-    static Transform playerTransform;
 
     EnemyGun gun;
     Vector3 velocity;
@@ -146,14 +145,10 @@ public class EnemyBullet : MonoBehaviour
     
     void CheckWhiz()
     {
+        // The gun already knows the player's car, so no scene search is needed.
+        Transform playerTransform = gun != null ? gun.target : null;
         if (playerTransform == null)
-        {
-            PlayerHealth player = FindFirstObjectByType<PlayerHealth>();
-            if (player == null)
-                return;
-
-            playerTransform = player.transform;
-        }
+            return;
 
         float sqrDist = (playerTransform.position - transform.position).sqrMagnitude;
         if (sqrDist > whizDistance * whizDistance)

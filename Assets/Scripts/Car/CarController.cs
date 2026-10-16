@@ -76,6 +76,13 @@ public class CarController : MonoBehaviour
     // Drift state
     private WheelFrictionCurve baseRearSideways;
     private float rearGripLoss; // 0 = full grip, 1 = fully sliding
+    private float appliedRearStiffness = float.NaN; // last value written to the rear wheels
+
+    // Wheel ground hits, read once per frame and shared with the audio and tyre effects.
+    private readonly WheelHit[] frameHits = new WheelHit[4];
+    private readonly bool[] frameGrounded = new bool[4];
+    private int frameHitsStamp = -1;
+
     private float smoothedSteer;
 
     // Taillight state
@@ -135,6 +142,34 @@ public class CarController : MonoBehaviour
     private static bool RaceWon
     {
         get { return GameManager.Instance != null && GameManager.Instance.IsWon; }
+    }
+
+    /// <summary>True on the car that pushes its speed to the HUD (the player's car).</summary>
+    public bool UpdatesHud => updatesHud;
+
+    /// <summary>
+    /// The wheel's ground hit for this frame. The first call each frame reads the four wheels; later calls reuse it,
+    /// so the audio and tyre effects don't each query the physics engine again. Use it from Update or LateUpdate only
+    /// (FixedUpdate runs before the physics step, so it would be a step behind).
+    /// </summary>
+    public bool TryGetWheelHit(WheelCollider wheel, out WheelHit hit)
+    {
+        int index = wheel == wheel1 ? 0 : wheel == wheel2 ? 1 : wheel == wheel3 ? 2 : wheel == wheel4 ? 3 : -1;
+
+        if (index < 0)
+            return wheel.GetGroundHit(out hit);
+
+        if (frameHitsStamp != Time.frameCount)
+        {
+            frameGrounded[0] = wheel1.GetGroundHit(out frameHits[0]);
+            frameGrounded[1] = wheel2.GetGroundHit(out frameHits[1]);
+            frameGrounded[2] = wheel3.GetGroundHit(out frameHits[2]);
+            frameGrounded[3] = wheel4.GetGroundHit(out frameHits[3]);
+            frameHitsStamp = Time.frameCount;
+        }
+
+        hit = frameHits[index];
+        return frameGrounded[index];
     }
 
     /// <summary>Lets AI drivers set inputs on cars that are not player controlled.</summary>
@@ -419,8 +454,16 @@ public class CarController : MonoBehaviour
         float normalStiffness = baseRearSideways.stiffness * rearGripMultiplier;
 
         // WheelFrictionCurve is a struct, so copy it, change it, and assign it back.
+        float stiffness = Mathf.Lerp(normalStiffness, carData.driftSidewaysStiffness, rearGripLoss);
+
+        // Assigning friction makes the physics engine update the wheels, so only do it when the value moved.
+        if (!float.IsNaN(appliedRearStiffness) && Mathf.Approximately(stiffness, appliedRearStiffness))
+            return;
+
+        appliedRearStiffness = stiffness;
+
         WheelFrictionCurve friction = baseRearSideways;
-        friction.stiffness = Mathf.Lerp(normalStiffness, carData.driftSidewaysStiffness, rearGripLoss);
+        friction.stiffness = stiffness;
         wheel3.sidewaysFriction = friction;
         wheel4.sidewaysFriction = friction;
     }

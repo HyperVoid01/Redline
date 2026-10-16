@@ -57,6 +57,7 @@ public class TireEffects : MonoBehaviour
 
     private WheelState[] states;
     private Transform markRoot;
+    private CarController car; // shares one ground-hit read per frame with the audio
 
     private readonly Stack<TrailRenderer> pool = new Stack<TrailRenderer>();
     // Oldest first, because marks are added in the order they finish.
@@ -69,6 +70,12 @@ public class TireEffects : MonoBehaviour
 
     private void Awake()
     {
+        car = GetComponentInParent<CarController>();
+        if (car == null)
+        {
+            car = GetComponentInChildren<CarController>();
+        }
+
         if (wheels == null || wheels.Length == 0)
         {
             wheels = GetComponentsInChildren<WheelCollider>();
@@ -130,7 +137,17 @@ public class TireEffects : MonoBehaviour
 
         foreach (WheelState state in states)
         {
-            bool grounded = state.collider.GetGroundHit(out WheelHit hit);
+            bool grounded;
+            WheelHit hit;
+            if (car != null)
+            {
+                grounded = car.TryGetWheelHit(state.collider, out hit);
+            }
+            else
+            {
+                grounded = state.collider.GetGroundHit(out hit);
+            }
+
             float slip = grounded ? Mathf.Max(Mathf.Abs(hit.sidewaysSlip), Mathf.Abs(hit.forwardSlip)) : 0f;
             peakSlip = Mathf.Max(peakSlip, slip);
 

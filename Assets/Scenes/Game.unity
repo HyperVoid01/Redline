@@ -7264,10 +7264,10 @@ MonoBehaviour:
     prefabs:
     - {fileID: 2255602773032544116, guid: af3a54c6912e73048bc00c1249e49881, type: 3}
     - {fileID: 131202281390851362, guid: 3048e89d2870cb8408edd94046be34f3, type: 3}
-    mesh: {fileID: 0}
-    material: {fileID: 0}
+    mesh: {fileID: -2628482395200241503, guid: 1dd6685967f7abb44ac57f010f2c28d5, type: 3}
+    material: {fileID: 2100000, guid: dc5f820c316ae1448a4717f745e5043a, type: 2}
     drawDistance: 0
-    perHundredMeters: 100
+    perHundredMeters: 50
     minDistFromRoad: 2
     maxDistFromRoad: 25
     nearRoadBias: 0.5
@@ -7283,10 +7283,10 @@ MonoBehaviour:
     - {fileID: 5274263171301016455, guid: c93189ac67be498489207a6d11bbe914, type: 3}
     - {fileID: 7793260211553175482, guid: d47e28e08b51d1345a541e5c409492e1, type: 3}
     - {fileID: 303780422234602008, guid: c931f6d808721d44a8d685f89f2d4a70, type: 3}
-    mesh: {fileID: 0}
-    material: {fileID: 0}
+    mesh: {fileID: -5787051826044892044, guid: 1dd6685967f7abb44ac57f010f2c28d5, type: 3}
+    material: {fileID: 2100000, guid: 3182230a4cf8414498fcae912a57e17e, type: 2}
     drawDistance: 0
-    perHundredMeters: 100
+    perHundredMeters: 50
     minDistFromRoad: 2
     maxDistFromRoad: 25
     nearRoadBias: 0.5
@@ -7319,7 +7319,7 @@ MonoBehaviour:
   rayHeight: 40
   scatterOnStart: 0
   chunkLength: 40
-  prefabDrawDistance: 300
+  prefabDrawDistance: 150
 --- !u!4 &1311318524
 Transform:
   m_ObjectHideFlags: 0
@@ -8550,6 +8550,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   freezeOnWin: 1
+  winPanelDelay: 3
+  slowMoOnFinish: 1
+  slowMoScale: 0.3
+  slowMoDuration: 0.5
+  slowMoRecover: 0.5
   gameOverDelay: 1.5
   pauseWithEscape: 1
 --- !u!1 &1623292183

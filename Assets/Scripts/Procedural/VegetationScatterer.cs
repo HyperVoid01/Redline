@@ -145,7 +145,12 @@ public class VegetationScatterer : MonoBehaviour
                     : Quaternion.identity;
                 Quaternion rotation = surface * Quaternion.Euler(tiltX, yaw, tiltZ);
 
-                Vector3 position = hit.point + Vector3.up * layer.yOffset;
+                // The terrain collider is coarser than the visible mesh, so take the height from the mesh's own formula.
+                Vector3 surfacePoint = hit.point;
+                if (terrain.SampleSurfaceHeight(surfacePoint.x, surfacePoint.z, out float surfaceY))
+                    surfacePoint.y = surfaceY;
+
+                Vector3 position = surfacePoint + Vector3.up * layer.yOffset;
 
                 Chunk chunk = GetChunk(Mathf.FloorToInt(d / chunkLength));
                 chunk.sum += position;

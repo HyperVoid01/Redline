@@ -43,6 +43,7 @@ public class UISpeedometer : MonoBehaviour
 
     private float currentSpeedKmh;
     private float displayedAngle;
+    private float appliedAngle = float.NaN;   // the angle last written to the needle and fill
     private bool externalSpeed;
     private int lastShownSpeed = -1;
     private bool lastShownMph;
@@ -93,8 +94,14 @@ public class UISpeedometer : MonoBehaviour
         // Frame-rate independent smoothing.
         displayedAngle = Mathf.Lerp(displayedAngle, targetAngle, 1f - Mathf.Exp(-smoothing * Time.unscaledDeltaTime));
 
-        ApplyNeedleRotation();
-        ApplyFill(Mathf.InverseLerp(zeroSpeedAngle, maxSpeedAngle, displayedAngle));
+        // Writing to the UI marks the canvas dirty, so skip it while the needle is effectively still.
+        if (float.IsNaN(appliedAngle) || Mathf.Abs(displayedAngle - appliedAngle) > 0.02f)
+        {
+            appliedAngle = displayedAngle;
+            ApplyNeedleRotation();
+            ApplyFill(Mathf.InverseLerp(zeroSpeedAngle, maxSpeedAngle, displayedAngle));
+        }
+
         UpdateText();
     }
 

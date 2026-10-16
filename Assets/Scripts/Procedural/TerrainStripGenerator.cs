@@ -47,12 +47,20 @@ public class TerrainStripGenerator : MonoBehaviour
     [Tooltip("Turn this off if TrackMaker builds the spline at runtime, and call Generate() once the track exists.")]
     public bool generateOnStart = true;
 
+    [Header("Collider (coarser than the visible mesh)")]
+    [Tooltip("The physics mesh uses every Nth row along the road. 1 = same as the visible mesh. 2 = a quarter of the triangles (with the column step).")]
+    [Min(1)] public int colliderRowStep = 2;
+    [Tooltip("The physics mesh uses every Nth column across the land. The outermost column is always kept.")]
+    [Min(1)] public int colliderColumnStep = 2;
+
     public float TrackLength { get; private set; }
     public MeshCollider Collider { get; private set; }
     public bool HasGenerated { get; private set; }
 
     Mesh mesh;
+    Mesh colliderMesh;
     float noiseOffsetX, noiseOffsetZ;
+    float savedRoadHalf;
 
     // Kept after generation so the scatterer can ask "how far is this point from any road?"
     Vector3[] roadCenters;
@@ -163,6 +171,7 @@ public class TerrainStripGenerator : MonoBehaviour
         }
 
         float roadHalf = roadWidth * 0.5f;
+        savedRoadHalf = roadHalf;
         float totalWidth = edgeOverlap + landWidth;
         float colStep = totalWidth / sideColumns;
 
@@ -277,10 +286,113 @@ public class TerrainStripGenerator : MonoBehaviour
         mesh.RecalculateBounds();
 
         GetComponent<MeshFilter>().sharedMesh = mesh;
+        // The collider doesn't need the visible mesh's detail, and baking a smaller mesh is much faster.
+        BuildColliderMesh(vertices, owned, rows, cols, vertsPerSide);
+
         Collider.sharedMesh = null;      // forces a rebake when regenerating
-        Collider.sharedMesh = mesh;
+        Collider.sharedMesh = colliderMesh;
 
         HasGenerated = true;
+    }
+
+    // ---------- Coarse collider ----------
+
+    // Keeps every Nth row and column of the same grid (always including the last of each),
+    // so the physics surface follows the visible land with far fewer triangles.
+    void BuildColliderMesh(Vector3[] vertices, bool[] owned, int rows, int cols, int vertsPerSide)
+    {
+        int rowStep = Mathf.Max(1, colliderRowStep);
+        int colStep = Mathf.Max(1, colliderColumnStep);
+
+        List<int> keptRows = new List<int>();
+        for (int r = 0; r < rows; r += rowStep) keptRows.Add(r);
+        if (keptRows[keptRows.Count - 1] != rows - 1) keptRows.Add(rows - 1);
+
+        List<int> keptCols = new List<int>();
+        for (int c = 0; c < cols; c += colStep) keptCols.Add(c);
+        if (keptCols[keptCols.Count - 1] != cols - 1) keptCols.Add(cols - 1);
+
+        int cRows = keptRows.Count;
+        int cCols = keptCols.Count;
+        int cPerSide = cRows * cCols;
+
+        Vector3[] cVerts = new Vector3[cPerSide * 2];
+        bool[] cOwned = new bool[cVerts.Length];
+
+        for (int s = 0; s < 2; s++)
+        {
+            for (int r = 0; r < cRows; r++)
+            {
+                for (int c = 0; c < cCols; c++)
+                {
+                    int source = s * vertsPerSide + keptRows[r] * cols + keptCols[c];
+                    int target = s * cPerSide + r * cCols + c;
+                    cVerts[target] = vertices[source];
+                    cOwned[target] = owned[source];
+                }
+            }
+        }
+
+        List<int> tris = new List<int>((cRows - 1) * (cCols - 1) * 12);
+
+        for (int s = 0; s < 2; s++)
+        {
+            for (int r = 0; r < cRows - 1; r++)
+            {
+                for (int c = 0; c < cCols - 1; c++)
+                {
+                    int i0 = s * cPerSide + r * cCols + c;
+                    int i1 = i0 + cCols;
+                    int i2 = i0 + 1;
+                    int i3 = i1 + 1;
+
+                    // Same winding as the visible mesh.
+                    if (s == 1)
+                    {
+                        AddTriangle(tris, cVerts, cOwned, i0, i1, i2);
+                        AddTriangle(tris, cVerts, cOwned, i2, i1, i3);
+                    }
+                    else
+                    {
+                        AddTriangle(tris, cVerts, cOwned, i0, i2, i1);
+                        AddTriangle(tris, cVerts, cOwned, i2, i3, i1);
+                    }
+                }
+            }
+        }
+
+        if (colliderMesh == null)
+        {
+            colliderMesh = new Mesh { name = "TerrainStripCollider" };
+            colliderMesh.indexFormat = IndexFormat.UInt32;
+        }
+
+        colliderMesh.Clear();
+        colliderMesh.vertices = cVerts;
+        colliderMesh.triangles = tris.ToArray();
+        colliderMesh.RecalculateBounds();
+    }
+
+    /// <summary>
+    /// Height of the visible land at a world X/Z, worked out from the same formula the mesh is built from.
+    /// The collider is coarser than the mesh, so use this (not a raycast hit's Y) to place things on the ground.
+    /// </summary>
+    public bool SampleSurfaceHeight(float x, float z, out float height)
+    {
+        height = 0f;
+
+        if (!HasGenerated || roadGrid == null)
+            return false;
+
+        float nearestDist = NearestRoadDistance(x, z, out int nearestRow);
+        if (nearestDist == float.MaxValue)
+            return false;
+
+        float edgeDist = Mathf.Max(0f, nearestDist - savedRoadHalf);
+        float blend = Mathf.SmoothStep(0f, 1f, edgeDist / Mathf.Max(0.01f, flatBlendDistance));
+        float noise = Noise(x, z);
+        height = roadCenters[nearestRow].y - edgeDrop + (noise - 0.5f) * 2f * hillHeight * blend;
+        return true;
     }
 
     // ---------- Nearest-road lookup ----------
