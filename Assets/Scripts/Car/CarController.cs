@@ -43,6 +43,14 @@ public class CarController : MonoBehaviour
     [Tooltip("Found automatically on this car if left empty. Only used on the player's car.")]
     [SerializeField] private PlayerHealth health;
 
+    [Header("Finish (player only)")]
+    [Tooltip("Ignore the player's driving input once the finish line is crossed, so the car just rolls on.")]
+    [SerializeField] private bool disableInputOnFinish = true;
+    [Tooltip("Brake gently after the finish line so the car slows down by itself.")]
+    [SerializeField] private bool autoBrakeOnFinish = true;
+    [Tooltip("Braking after the finish as a fraction of CarData.brakeForce. Raise it if the car doesn't stop within the runout, lower it for a longer roll.")]
+    [SerializeField, Range(0f, 1f)] private float finishBrakeFraction = 0.5f;
+
     private const float MsToKmh = 3.6f;
 
     private float horizontalInput, verticalInput;
@@ -98,6 +106,12 @@ public class CarController : MonoBehaviour
         }
     }
 
+    // True once the player has crossed the finish line.
+    private static bool RaceWon
+    {
+        get { return GameManager.Instance != null && GameManager.Instance.IsWon; }
+    }
+
     /// <summary>Lets AI drivers set inputs on cars that are not player controlled.</summary>
     public void SetInputs(float steer, float throttle, bool useHandbrake)
     {
@@ -138,9 +152,12 @@ public class CarController : MonoBehaviour
     {
         if (playerControlled && InputManager.Instance != null)
         {
-            if (disableInputWhenDead && health != null && health.IsDead)
+            bool dead = disableInputWhenDead && health != null && health.IsDead;
+            bool finished = disableInputOnFinish && RaceWon;
+
+            if (dead || finished)
             {
-                // Wrecked: no steering, throttle or handbrake. The car just rolls on.
+                // Wrecked or finished: no steering, throttle or handbrake. The car just rolls on.
                 horizontalInput = 0f;
                 verticalInput = 0f;
                 handbrake = false;
@@ -202,6 +219,14 @@ public class CarController : MonoBehaviour
         float rearBrake = Mathf.Max(
             inputOpposesMotion ? carData.brakeForce : 0f,
             handbrake ? carData.handbrakeForce : 0f);
+
+        // After the finish line: slow down by itself, gently, on all four wheels.
+        if (playerControlled && autoBrakeOnFinish && RaceWon)
+        {
+            float finishBrake = carData.brakeForce * finishBrakeFraction;
+            frontBrake = Mathf.Max(frontBrake, finishBrake);
+            rearBrake = Mathf.Max(rearBrake, finishBrake);
+        }
 
         UpdateRearGrip(dt);
         ApplyDrive(frontMotor, rearMotor, frontBrake, rearBrake);

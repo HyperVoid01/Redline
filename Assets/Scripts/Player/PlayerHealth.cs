@@ -41,6 +41,10 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("The longest the game over screen is ever held back, in case a particle system is very long or looping.")]
     public float maxDelay = 6f;
 
+    [Header("Finish")]
+    [Tooltip("Once the finish line is crossed the car takes no more damage, so enemies can't blow it up during the victory roll.")]
+    public bool invulnerableAfterFinish = true;
+
     public float Current { get; private set; }
     public bool IsDead { get; private set; }
     public float Normalized { get { return maxHealth > 0f ? Current / maxHealth : 0f; } }
@@ -79,6 +83,10 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (IsDead || amount <= 0f)
+            return;
+
+        // The race is won: no dying during the victory roll.
+        if (invulnerableAfterFinish && GameManager.Instance != null && GameManager.Instance.IsWon)
             return;
 
         Current = Mathf.Max(0f, Current - amount);

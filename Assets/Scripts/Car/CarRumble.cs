@@ -63,6 +63,17 @@ public class CarRumble : MonoBehaviour
     [Tooltip("Stop the speed shake and scrape once the car has exploded, so only the explosion is felt.")]
     [SerializeField] private bool silenceOtherRumbleAfterExplosion = true;
 
+    // ------------------------------------------------------------------ Finish
+
+    [Header("Finish")]
+    [Tooltip("Strong pulse when the car crosses the finish line.")]
+    [SerializeField] private bool finishRumble = true;
+    [SerializeField, Range(0f, 1f)] private float finishStrength = 0.9f;
+    [Tooltip("Seconds for the finish rumble to fade out.")]
+    [SerializeField] private float finishFadeTime = 1f;
+    [Tooltip("Stop the speed shake and scrape after the finish line, so only the finish pulse is felt and the roll-out is calm.")]
+    [SerializeField] private bool silenceOtherRumbleAfterFinish = true;
+
     // ------------------------------------------------------------------ Debug
 
     [Header("Debug")]
@@ -73,7 +84,9 @@ public class CarRumble : MonoBehaviour
     private float impact;            // 0-1, decays over time
     private float damagePulse;       // 0-1, decays over time
     private float explosion;         // 0-1, decays over time
+    private float finishPulse;       // 0-1, decays over time
     private bool exploded;
+    private bool finished;
     private float lastScrapeTime = -1f;
 
     // Debug readout
@@ -88,6 +101,11 @@ public class CarRumble : MonoBehaviour
 
         if (barrierImpacts && barrierLayers.value == 0)
             Debug.LogWarning("CarRumble: Barrier Layers is empty, so barrier hits will not rumble.", this);
+    }
+
+    private void OnEnable()
+    {
+        GameManager.RaceFinished += OnRaceFinished;
     }
 
     // ---------------------------------------------------------------- Called from PlayerHealth
@@ -122,11 +140,28 @@ public class CarRumble : MonoBehaviour
             Debug.Log($"CarRumble explosion. Strength: {explosionStrength:F2}");
     }
 
+    // The car crossed the finish line (GameManager.RaceFinished).
+    private void OnRaceFinished()
+    {
+        finished = true;
+
+        if (!enableRumble || !finishRumble)
+            return;
+
+        finishPulse = finishStrength;
+        damagePulse = 0f;
+
+        if (showDebug)
+            Debug.Log($"CarRumble finish. Strength: {finishStrength:F2}");
+    }
+
     /// <summary>Call when the car is repaired or respawned.</summary>
     public void ResetState()
     {
         exploded = false;
+        finished = false;
         explosion = 0f;
+        finishPulse = 0f;
         damagePulse = 0f;
         impact = 0f;
         lastScrapeTime = -1f;
@@ -186,8 +221,9 @@ public class CarRumble : MonoBehaviour
         impact = Mathf.MoveTowards(impact, 0f, dt / Mathf.Max(0.01f, impactFadeTime));
         damagePulse = Mathf.MoveTowards(damagePulse, 0f, dt / Mathf.Max(0.01f, damageFadeTime));
         explosion = Mathf.MoveTowards(explosion, 0f, explosionStrength * dt / Mathf.Max(0.01f, explosionFadeTime));
+        finishPulse = Mathf.MoveTowards(finishPulse, 0f, finishStrength * dt / Mathf.Max(0.01f, finishFadeTime));
 
-        bool quietCar = exploded && silenceOtherRumbleAfterExplosion;
+        bool quietCar = (exploded && silenceOtherRumbleAfterExplosion) || (finished && silenceOtherRumbleAfterFinish);
 
         // Speed shake: starts at a level you can feel, then climbs toward the redline
         lastSpeedKmh = rb.linearVelocity.magnitude * 3.6f;
@@ -227,15 +263,20 @@ public class CarRumble : MonoBehaviour
         float explosionLow = explosion;
         float explosionHigh = explosion * 0.8f;
 
+        // Finish: both motors, so it reads as a bright, full pulse rather than a thud
+        float finishLow = finishPulse * 0.8f;
+        float finishHigh = finishPulse;
+
         // Low motor = heavy thud, high motor = fine buzz
-        float low = Mathf.Clamp01(impactLow + shakeLow + scrapeLow + damageLow + explosionLow) * strength;
-        float high = Mathf.Clamp01(impactHigh + shakeHigh + scrapeHigh + damageHigh + explosionHigh) * strength;
+        float low = Mathf.Clamp01(impactLow + shakeLow + scrapeLow + damageLow + explosionLow + finishLow) * strength;
+        float high = Mathf.Clamp01(impactHigh + shakeHigh + scrapeHigh + damageHigh + explosionHigh + finishHigh) * strength;
 
         pad.SetMotorSpeeds(low, high);
         lastLow = low;
         lastHigh = high;
     }
 
+    // Winning does not silence the rumble, so the finish pulse can play. It goes quiet once the game freezes.
     private static string GetSilentReason()
     {
         if (Time.timeScale == 0f)
@@ -246,7 +287,6 @@ public class CarRumble : MonoBehaviour
         {
             if (gm.IsPaused) return "game is paused";
             if (gm.IsFrozen) return "game is frozen after game over or win";
-            if (gm.IsWon) return "run is won";
         }
 
         return null;
@@ -306,11 +346,11 @@ public class CarRumble : MonoBehaviour
         Gamepad pad = Gamepad.current;
         string padName = pad != null ? pad.displayName : "NONE";
 
-        GUI.Label(new Rect(10, 10, 600, 160),
+        GUI.Label(new Rect(10, 10, 700, 160),
             "Rumble debug\n" +
             $"Gamepad: {padName}\n" +
             $"Status: {status}\n" +
-            $"Speed: {lastSpeedKmh:F0} km/h   Impact: {impact:F2}   Damage: {damagePulse:F2}   Explosion: {explosion:F2}\n" +
+            $"Speed: {lastSpeedKmh:F0} km/h   Impact: {impact:F2}   Damage: {damagePulse:F2}   Explosion: {explosion:F2}   Finish: {finishPulse:F2}\n" +
             $"Motors: low {lastLow:F2}   high {lastHigh:F2}");
     }
 
@@ -319,12 +359,18 @@ public class CarRumble : MonoBehaviour
         impact = 0f;
         damagePulse = 0f;
         explosion = 0f;
+        finishPulse = 0f;
         lastScrapeTime = -1f;
         if (Gamepad.current != null)
             Gamepad.current.SetMotorSpeeds(0f, 0f);
     }
 
-    private void OnDisable() => StopRumble();
+    private void OnDisable()
+    {
+        GameManager.RaceFinished -= OnRaceFinished;
+        StopRumble();
+    }
+
     private void OnApplicationQuit() => StopRumble();
     private void OnApplicationPause(bool paused)
     {

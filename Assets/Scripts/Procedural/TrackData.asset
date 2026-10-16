@@ -42,4 +42,4 @@ MonoBehaviour:
   firstGateDistance: 150
   gateSpacing: 500
   finishPrefab: {fileID: 327334984979816120, guid: 2f2546cae10684442a53b345e383fe95, type: 3}
-  runoutLength: 80
+  runoutLength: 150

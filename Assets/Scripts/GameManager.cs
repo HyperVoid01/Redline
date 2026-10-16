@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,8 +8,21 @@ using UnityEngine.InputSystem;
 
 public class GameManager : MonoBehaviour
 {
-    [Tooltip("Freeze the game on win, like game over does.")]
+    [Header("Win")]
+    [Tooltip("Freeze the game once the win panel appears, like game over does.")]
     [SerializeField] private bool freezeOnWin = true;
+    [Tooltip("Real seconds between crossing the finish line and the win panel appearing. The car rolls on and brakes during this. 0 = straight away.")]
+    [SerializeField] private float winPanelDelay = 3f;
+
+    [Header("Win slow motion")]
+    [Tooltip("Dips into slow motion for a moment as the car crosses the line.")]
+    [SerializeField] private bool slowMoOnFinish = true;
+    [Tooltip("Time scale during the dip. 0.3 = 30% speed.")]
+    [SerializeField, Range(0.05f, 1f)] private float slowMoScale = 0.3f;
+    [Tooltip("Real seconds spent at the slow speed.")]
+    [SerializeField] private float slowMoDuration = 0.5f;
+    [Tooltip("Real seconds to ease back to normal speed.")]
+    [SerializeField] private float slowMoRecover = 0.5f;
 
     [Header("Game over")]
     [Tooltip("Default seconds between losing and the game over panel appearing and the game freezing. " +
@@ -25,6 +39,9 @@ public class GameManager : MonoBehaviour
     public bool IsPaused { get; private set; }
     public bool IsSettingsOpen { get; private set; }
 
+    /// <summary>True from crossing the finish line until the win panel appears (the car is rolling out).</summary>
+    public bool IsFinishing { get; private set; }
+
     /// <summary>True once the game has actually frozen after game over or win. Car audio silences itself on this.</summary>
     public bool IsFrozen { get; private set; }
 
@@ -32,9 +49,12 @@ public class GameManager : MonoBehaviour
     public bool InputBlocked => IsPaused;
 
     /// <summary>True while the mouse cursor should be visible and free.</summary>
-    public bool WantsCursorFree => IsPaused || IsGameOver;
+    public bool WantsCursorFree => IsPaused || (IsGameOver && !IsFinishing);
 
     public static GameManager Instance;
+
+    /// <summary>Fires once, the moment the player crosses the finish line. Rumble, camera and sound effects listen to this.</summary>
+    public static event Action RaceFinished;
 
     // Handle for the looping night ambience, kept so it can be stopped later.
     private AudioSource nightAmbience;
@@ -44,6 +64,10 @@ public class GameManager : MonoBehaviour
     private bool cursorVisibleBeforePause;
 
     private Coroutine gameOverRoutine;
+    private Coroutine winRoutine;
+
+    // Physics step before any slow motion, so it can be put back.
+    private float baseFixedDeltaTime;
 
     private void Awake()
     {
@@ -54,6 +78,7 @@ public class GameManager : MonoBehaviour
         }
 
         Instance = this;
+        baseFixedDeltaTime = Time.fixedDeltaTime;
     }
 
     private void Start()
@@ -78,8 +103,8 @@ public class GameManager : MonoBehaviour
         {
             StopNightAmbience();
 
-            // Never carry a paused game into the next scene.
-            Time.timeScale = 1f;
+            // Never carry a paused or slowed game into the next scene.
+            SetTimeScale(1f);
             AudioListener.pause = false;
         }
     }
@@ -93,12 +118,19 @@ public class GameManager : MonoBehaviour
             gameOverRoutine = null;
         }
 
+        if (winRoutine != null)
+        {
+            StopCoroutine(winRoutine);
+            winRoutine = null;
+        }
+
         IsGameOver = false;
         IsWon = false;
+        IsFinishing = false;
         IsPaused = false;
         IsSettingsOpen = false;
         IsFrozen = false;
-        Time.timeScale = 1f;
+        SetTimeScale(1f);
         AudioListener.pause = false;
 
         if (UIManager.Instance != null)
@@ -114,6 +146,15 @@ public class GameManager : MonoBehaviour
         }
 
         StartNightAmbience();
+    }
+
+    // Sets the time scale and keeps the physics step in proportion, so slow motion stays smooth.
+    private void SetTimeScale(float scale)
+    {
+        Time.timeScale = scale;
+
+        if (baseFixedDeltaTime > 0f)
+            Time.fixedDeltaTime = scale > 0f ? baseFixedDeltaTime * scale : baseFixedDeltaTime;
     }
 
     // ---------- Pause ----------
@@ -136,7 +177,7 @@ public class GameManager : MonoBehaviour
         IsPaused = true;
         IsSettingsOpen = false;
 
-        Time.timeScale = 0f;
+        SetTimeScale(0f);
 
         // Loops and the engine sound keep playing at timeScale 0, so pause all audio.
         AudioListener.pause = true;
@@ -158,7 +199,7 @@ public class GameManager : MonoBehaviour
         IsPaused = false;
         IsSettingsOpen = false;
 
-        Time.timeScale = 1f;
+        SetTimeScale(1f);
         AudioListener.pause = false;
 
         Cursor.lockState = cursorLockBeforePause;
@@ -314,10 +355,10 @@ public class GameManager : MonoBehaviour
             SoundPlayer.Instance.PlaySound2D(SoundID.GameOver);
 
         // Freezes physics and Update-driven movement.
-        Time.timeScale = 0f;
+        SetTimeScale(0f);
     }
 
-    // Reached the finish platform
+    // Reached the finish line
     public void WinGame()
     {
         // Marking the game as over also stops a loss being triggered after a win.
@@ -326,12 +367,66 @@ public class GameManager : MonoBehaviour
 
         IsGameOver = true;
         IsWon = true;
+        IsFinishing = true;
 
-        // Adds the finish bonus, then saves the best score, before the win panel reads it.
+        // Adds the finish bonus, then saves the best score. The score is locked in at the line,
+        // before the win panel reads it.
         if (ScoreManager.Instance != null)
         {
             ScoreManager.Instance.FinishRun(true);
         }
+
+        // Rumble, camera kick, sting and confetti all hang off this.
+        RaceFinished?.Invoke();
+
+        if (winPanelDelay <= 0f && !slowMoOnFinish)
+        {
+            ShowWinAndFreeze();
+            return;
+        }
+
+        winRoutine = StartCoroutine(WinSequence());
+    }
+
+    // Slow motion dip, then the car rolls on until the win panel appears.
+    private IEnumerator WinSequence()
+    {
+        float start = Time.unscaledTime;
+
+        if (slowMoOnFinish && slowMoDuration > 0f)
+        {
+            SetTimeScale(slowMoScale);
+
+            float held = 0f;
+            while (held < slowMoDuration)
+            {
+                held += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            float recovered = 0f;
+            float recover = Mathf.Max(0.01f, slowMoRecover);
+            while (recovered < recover)
+            {
+                recovered += Time.unscaledDeltaTime;
+                SetTimeScale(Mathf.Lerp(slowMoScale, 1f, Mathf.SmoothStep(0f, 1f, recovered / recover)));
+                yield return null;
+            }
+
+            SetTimeScale(1f);
+        }
+
+        // Real time, so slow motion doesn't stretch the wait.
+        while (Time.unscaledTime - start < winPanelDelay)
+            yield return null;
+
+        winRoutine = null;
+        ShowWinAndFreeze();
+    }
+
+    private void ShowWinAndFreeze()
+    {
+        IsFinishing = false;
 
         if (UIManager.Instance != null)
         {
@@ -344,7 +439,11 @@ public class GameManager : MonoBehaviour
         if (freezeOnWin)
         {
             IsFrozen = true;
-            Time.timeScale = 0f;
+            SetTimeScale(0f);
+        }
+        else
+        {
+            SetTimeScale(1f);
         }
     }
 
